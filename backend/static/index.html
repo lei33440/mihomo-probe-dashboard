@@ -122,50 +122,84 @@
       overflow: hidden;
     }
     .node-list-header {
-      padding: 16px 20px; display: flex; align-items: center;
-      justify-content: space-between; gap: 16px; flex-wrap: wrap;
+      padding: 18px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; flex-wrap: wrap;
       border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
     }
-    .node-list-title { display: flex; align-items: center; gap: 10px; }
+    .node-list-title { display: flex; align-items: center; gap: 12px; }
     .node-list-title .ico {
-      width: 28px; height: 28px; border-radius: 8px;
-      background: var(--blue-light); color: var(--blue-2);
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 14px;
+      width: 40px; height: 40px; border-radius: 10px;
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff; display: inline-flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, .3);
     }
-    .node-list-title h2 { font-size: 16px; font-weight: 600; margin: 0; color: var(--text); }
-    .node-list-title h2 .count { color: var(--muted); font-weight: 500; font-size: 14px; margin-left: 4px; }
-    .node-list-title .desc { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .node-list-title h2 {
+      font-size: 17px; font-weight: 700; margin: 0; color: var(--text);
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .node-list-title h2 .count {
+      color: var(--muted); font-weight: 500; font-size: 14px;
+    }
+    .node-list-title h2 .count strong {
+      color: var(--blue-2); font-weight: 700; font-size: 16px;
+    }
+    .node-list-title .desc {
+      font-size: 12px; color: var(--muted); margin-top: 4px;
+    }
+    .node-list-title .desc .ok { color: var(--green-2); font-weight: 600; }
+    .node-list-title .desc .bad { color: var(--red-2); font-weight: 600; }
 
-    .node-list-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-    .search-box {
-      position: relative;
+    .node-list-controls {
+      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
     }
+    .search-box { position: relative; }
     .search-box input {
-      padding: 7px 12px 7px 32px; width: 220px;
-      background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-      font-size: 13px; outline: none; transition: border-color .15s;
+      width: 240px; padding: 9px 14px 9px 36px;
+      background: var(--panel-2); border: 1px solid var(--border);
+      border-radius: 10px; font-size: 13px; outline: none;
+      transition: all .15s ease;
     }
-    .search-box input:focus { border-color: var(--blue); background: #fff; }
+    .search-box input::placeholder { color: var(--muted-2); }
+    .search-box input:focus {
+      border-color: var(--blue); background: #fff;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
+    }
     .search-box::before {
-      content: '🔍'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-      font-size: 13px; color: var(--muted);
+      content: '🔍'; position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%); font-size: 13px; color: var(--muted);
+      pointer-events: none;
     }
 
     .filter-row {
-      padding: 12px 20px;
-      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      padding: 14px 22px;
+      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
       border-bottom: 1px solid var(--border);
-      background: var(--panel-2);
+      background: var(--panel);
     }
-    .filter-row .filter-group { display: flex; align-items: center; gap: 6px; }
-    .filter-row .label { color: var(--muted); font-size: 12px; }
+    .filter-row .filter-group {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .filter-row .label {
+      color: var(--muted); font-size: 12px; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .filter-row .label::before {
+      content: ''; display: inline-block; width: 4px; height: 14px;
+      background: var(--blue); border-radius: 2px;
+    }
+    .filter-row .label.country::before { background: linear-gradient(180deg, #f97316, #ef4444); }
+    .filter-row .label.status::before { background: linear-gradient(180deg, #22c55e, #ef4444); }
+
     .filter-row .chip {
-      padding: 4px 12px; border-radius: 14px;
-      background: var(--panel); border: 1px solid var(--border);
+      padding: 5px 12px; border-radius: 14px;
+      background: var(--panel-2); border: 1px solid var(--border);
       font-size: 12px; color: var(--text-2); cursor: pointer;
       transition: all .15s ease; user-select: none;
-      display: inline-flex; align-items: center; gap: 4px;
+      display: inline-flex; align-items: center; gap: 6px;
+      font-weight: 500;
     }
     .filter-row .chip:hover:not(.active) {
       border-color: var(--blue); color: var(--blue);
@@ -178,12 +212,34 @@
       box-shadow: 0 2px 8px rgba(59, 130, 246, .35);
     }
     .filter-row .chip .badge {
-      background: rgba(255, 255, 255, .3); border-radius: 8px;
-      padding: 0 6px; font-size: 11px; font-weight: 600;
-    }
-    .filter-row .chip:not(.active) .badge {
       background: var(--panel-3); color: var(--muted);
+      border-radius: 8px; padding: 0 6px; font-size: 10px; font-weight: 700;
+      line-height: 14px; min-width: 16px; text-align: center;
     }
+    .filter-row .chip.active .badge {
+      background: rgba(255, 255, 255, .3); color: #fff;
+    }
+    .filter-row .chip .ico-emoji { font-size: 13px; line-height: 1; }
+    .filter-row .chip .ico-check {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--green); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 700; line-height: 1;
+    }
+    .filter-row .chip .ico-x {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: var(--red); color: #fff;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 10px; font-weight: 700; line-height: 1;
+    }
+
+    /* 滚动条美化 */
+    .filter-scroll {
+      display: flex; gap: 6px; overflow-x: auto; max-width: 100%;
+      scrollbar-width: thin;
+    }
+    .filter-scroll::-webkit-scrollbar { height: 4px; }
+    .filter-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
 
     .legend {
       padding: 10px 20px; display: flex; align-items: center; gap: 18px;
@@ -380,12 +436,9 @@
 
   <section class="node-list-card">
     <div class="node-list-header">
-      <div>
-        <div class="node-list-title">
-          <span class="ico">📋</span>
-          <h2>所有节点<span class="count" id="nodeCount">(—)</span></h2>
-        </div>
-        <div class="node-list-title desc" id="nodeListDesc">— 正在被探测 · — 可用 · — 不可用</div>
+      <div class="node-list-title">
+        <span class="ico">📋</span>
+        <h2>所有节点 <span class="count">(<strong id="nodeCount">—</strong>)</span></h2>
       </div>
       <div class="node-list-controls">
         <div class="search-box">
@@ -393,17 +446,18 @@
         </div>
       </div>
     </div>
+    <div class="node-list-title desc" id="nodeListDesc" style="padding: 0 22px 12px; margin-top: -8px;">— 正在被探测 · <span class="ok">—</span> 可用 · <span class="bad">—</span> 不可用</div>
 
     <div class="filter-row">
       <div class="filter-group">
-        <span class="label">🌐 地区:</span>
-        <span id="countryChips"></span>
+        <span class="label country">国家/地区</span>
+        <div class="filter-scroll" id="countryChips"></div>
       </div>
       <div class="filter-group">
-        <span class="label">⚙ 状态:</span>
-        <span class="chip active" data-status="">全部</span>
-        <span class="chip" data-status="up">✓ 可用</span>
-        <span class="chip" data-status="down">✗ 不可用</span>
+        <span class="label status">状态</span>
+        <span class="chip active" data-status=""><span class="badge">59</span>全部</span>
+        <span class="chip" data-status="up"><span class="ico-check">✓</span>可用 <span class="badge">4</span></span>
+        <span class="chip" data-status="down"><span class="ico-x">✗</span>不可用 <span class="badge">55</span></span>
       </div>
     </div>
 
@@ -644,11 +698,11 @@
       const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
       const el = document.getElementById('countryChips');
       const totalAll = Object.values(counts).reduce((a, b) => a + b, 0);
-      el.innerHTML = `<span class="chip ${activeCountries.size === 0 ? 'active' : ''}" data-country="">🌐 全部 <span class="badge">${totalAll}</span></span>` +
+      el.innerHTML = `<span class="chip ${activeCountries.size === 0 ? 'active' : ''}" data-country=""><span class="ico-emoji">🌐</span>全部 <span class="badge">${totalAll}</span></span>` +
         sorted.map(c => {
           const info = COUNTRY_DISPLAY[c] || { flag: '🌍', name: c };
           const on = activeCountries.has(c);
-          return `<span class="chip ${on ? 'active' : ''}" data-country="${c}">${info.flag} ${escapeHtml(info.name)} <span class="badge">${counts[c]}</span></span>`;
+          return `<span class="chip ${on ? 'active' : ''}" data-country="${c}"><span class="ico-emoji">${info.flag}</span>${escapeHtml(info.name)} <span class="badge">${counts[c]}</span></span>`;
         }).join('');
       el.querySelectorAll('.chip').forEach(chip => {
         chip.onclick = () => {
@@ -747,10 +801,18 @@
       decorateBarsAdaptive(document.getElementById('statDecoAvail'), 5, avgAvailRatio || 0.25);
       decorateBarsAdaptive(document.getElementById('statDecoTotal'), 5, 0.6);
 
-      document.getElementById('nodeCount').textContent = `(${total})`;
+      document.getElementById('nodeCount').textContent = total;
       const probing = items.filter(x => x.recent_delays && x.recent_delays.length).length;
-      document.getElementById('nodeListDesc').textContent =
-        `${probing} 个节点正在被探测 · ${up} 个可用 · ${down} 个不可用`;
+      document.getElementById('nodeListDesc').innerHTML =
+        `${probing} 个节点正在被探测 · <span class="ok">${up} 个可用</span> · <span class="bad">${down} 个不可用</span>`;
+      // 同步状态筛选 chip 的徽章数字
+      const statusChips = document.querySelectorAll('[data-status] .badge');
+      statusChips.forEach(b => {
+        const s = b.parentElement.dataset.status;
+        if (s === '') b.textContent = total;
+        else if (s === 'up') b.textContent = up;
+        else if (s === 'down') b.textContent = down;
+      });
     }
 
     async function tick() {
