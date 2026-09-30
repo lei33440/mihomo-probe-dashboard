@@ -120,144 +120,197 @@
       border-radius: 14px;
       box-shadow: 0 1px 3px rgba(15, 23, 42, .04);
       overflow: hidden;
+      min-width: 0;
     }
     .node-list-header {
-      padding: 18px 22px;
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 20px; flex-wrap: wrap;
+      padding: 15px 20px;
+      display: grid;
+      grid-template-columns: minmax(0, 407px) 248px minmax(0, 1fr);
+      grid-template-rows: 40px 20px;
+      column-gap: 24px;
+      row-gap: 6px;
+      align-items: center;
       border-bottom: 1px solid var(--border);
-      background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+      background: linear-gradient(180deg, #fbfcfe 0%, #ffffff 100%);
     }
-    .node-list-title { display: flex; align-items: center; gap: 12px; }
+    .node-list-title {
+      display: flex; align-items: center; gap: 12px;
+      grid-column: 1; grid-row: 1;
+      align-self: center;
+    }
     .node-list-title .ico {
-      width: 40px; height: 40px; border-radius: 10px;
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: #fff; display: inline-flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 4px 10px rgba(59, 130, 246, .3);
+      width: 40px; height: 40px; border-radius: 11px;
+      background: #eff6ff;
+      color: #1677ff;
+      display: inline-flex; align-items: center; justify-content: center;
+      flex: 0 0 40px;
     }
     .node-list-title h2 {
-      font-size: 17px; font-weight: 700; margin: 0; color: var(--text);
+      font-size: 18px; font-weight: 700; margin: 0; color: #172b4d;
       display: flex; align-items: baseline; gap: 6px;
+      line-height: 1.2;
     }
     .node-list-title h2 .count {
-      color: var(--muted); font-weight: 500; font-size: 14px;
+      color: #64748b; font-weight: 500; font-size: 16px;
     }
     .node-list-title h2 .count strong {
-      color: var(--blue-2); font-weight: 700; font-size: 16px;
+      color: #64748b; font-weight: 600; font-size: 16px;
     }
-    .node-list-title .desc {
-      font-size: 12px; color: var(--muted); margin-top: 4px;
-    }
-    .node-list-title .desc .ok { color: var(--green-2); font-weight: 600; }
-    .node-list-title .desc .bad { color: var(--red-2); font-weight: 600; }
 
-    .node-list-controls {
-      display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    .node-list-stats {
+      grid-column: 1; grid-row: 2;
+      font-size: 12px; color: #94a3b8;
+      padding-left: 52px; align-self: center;
+      white-space: nowrap;
     }
-    .search-box { position: relative; }
+    .node-list-stats .ok { color: #64748b; font-weight: 500; }
+    .node-list-stats .bad { color: #64748b; font-weight: 500; }
+
+    .node-list-search {
+      grid-column: 2; grid-row: 1 / span 2;
+      display: flex; align-items: center;
+      min-width: 0;
+    }
+    .search-box { position: relative; width: 248px; }
     .search-box input {
-      width: 240px; padding: 9px 14px 9px 36px;
-      background: var(--panel-2); border: 1px solid var(--border);
-      border-radius: 10px; font-size: 13px; outline: none;
-      transition: all .15s ease;
+      width: 100%; height: 38px; padding: 0 12px 0 36px;
+      background: #f8fafc; border: 1px solid #dbe3ef;
+      border-radius: 8px; font-size: 12px; outline: none;
+      color: var(--text-2); transition: all .15s ease;
+      box-sizing: border-box;
     }
-    .search-box input::placeholder { color: var(--muted-2); }
+    .search-box input::placeholder { color: #94a3b8; }
     .search-box input:focus {
-      border-color: var(--blue); background: #fff;
+      border-color: #60a5fa; background: #fff;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, .12);
     }
     .search-box::before {
-      content: '🔍'; position: absolute; left: 12px; top: 50%;
-      transform: translateY(-50%); font-size: 13px; color: var(--muted);
+      content: ''; position: absolute; left: 11px; top: 50%;
+      transform: translateY(-50%); width: 16px; height: 16px;
+      background: no-repeat center/contain url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'><circle cx='11' cy='11' r='7'/><path stroke-linecap='round' d='m21 21-4.3-4.3'/></svg>");
       pointer-events: none;
     }
 
-    .filter-row {
-      padding: 14px 22px;
-      display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
-      border-bottom: 1px solid var(--border);
-      background: var(--panel);
+    /* ===== 参考图筛选区：右侧两行排列 ===== */
+    .node-list-filters {
+      grid-column: 3; grid-row: 1 / span 2;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 3px; min-width: 0;
     }
-    .filter-row .filter-group {
-      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    .filter-line {
+      display: flex; align-items: center; gap: 8px;
+      min-width: 0; height: 28px; white-space: nowrap;
     }
-    .filter-row .label {
-      color: var(--muted); font-size: 12px; font-weight: 600;
-      display: inline-flex; align-items: center; gap: 4px;
-    }
-    .filter-row .label::before {
-      content: ''; display: inline-block; width: 4px; height: 14px;
-      background: var(--blue); border-radius: 2px;
-    }
-    .filter-row .label.country::before { background: linear-gradient(180deg, #f97316, #ef4444); }
-    .filter-row .label.status::before { background: linear-gradient(180deg, #22c55e, #ef4444); }
-
-    .filter-row .chip {
-      padding: 5px 12px; border-radius: 14px;
-      background: var(--panel-2); border: 1px solid var(--border);
-      font-size: 12px; color: var(--text-2); cursor: pointer;
-      transition: all .15s ease; user-select: none;
+    .filter-line .lbl {
       display: inline-flex; align-items: center; gap: 6px;
-      font-weight: 500;
+      color: #64748b; font-size: 12px; font-weight: 500;
+      flex: 0 0 auto; padding: 0;
     }
-    .filter-row .chip:hover:not(.active) {
-      border-color: var(--blue); color: var(--blue);
-      transform: translateY(-1px); box-shadow: 0 2px 6px rgba(59, 130, 246, .12);
+    .filter-line .lbl svg { width: 16px; height: 16px; opacity: .9; }
+    .filter-line[data-line="country"] .filter-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      cursor: grab;
+      overscroll-behavior-x: contain;
+      scroll-behavior: smooth;
     }
-    .filter-row .chip:active { transform: scale(0.96); }
-    .filter-row .chip.active {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: #fff; border-color: var(--blue);
-      box-shadow: 0 2px 8px rgba(59, 130, 246, .35);
-    }
-    .filter-row .chip .badge {
-      background: var(--panel-3); color: var(--muted);
-      border-radius: 8px; padding: 0 6px; font-size: 10px; font-weight: 700;
-      line-height: 14px; min-width: 16px; text-align: center;
-    }
-    .filter-row .chip.active .badge {
-      background: rgba(255, 255, 255, .3); color: #fff;
-    }
-    .filter-row .chip .ico-emoji { font-size: 13px; line-height: 1; }
-    .filter-row .chip .ico-check {
-      width: 12px; height: 12px; border-radius: 50%;
-      background: var(--green); color: #fff;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 9px; font-weight: 700; line-height: 1;
-    }
-    .filter-row .chip .ico-x {
-      width: 12px; height: 12px; border-radius: 50%;
-      background: var(--red); color: #fff;
-      display: inline-flex; align-items: center; justify-content: center;
-      font-size: 10px; font-weight: 700; line-height: 1;
-    }
+    .filter-line[data-line="country"] .filter-scroll:active,
+    .filter-line[data-line="country"] .filter-scroll.is-dragging { cursor: grabbing; }
 
-    /* 滚动条美化 */
+    .node-list-filters .chip {
+      height: 28px; padding: 3px 5px 3px 11px; border-radius: 16px;
+      background: #fff; border: 1px solid #e2e8f0;
+      font-size: 12px; color: #475569; cursor: pointer;
+      transition: all .15s ease; user-select: none;
+      display: inline-flex; align-items: center; gap: 5px;
+      font-weight: 500; line-height: 1; flex: 0 0 auto;
+    }
+    .node-list-filters .chip:hover:not(.active) {
+      border-color: #93c5fd; color: #2563eb;
+      box-shadow: 0 1px 4px rgba(59, 130, 246, .12);
+    }
+    .node-list-filters .chip:active { transform: scale(.97); }
+    .node-list-filters .chip.active {
+      background: #eff6ff; color: #1677ff; border-color: #60a5fa;
+      box-shadow: 0 1px 3px rgba(59, 130, 246, .16);
+    }
+    .node-list-filters .chip .badge {
+      background: #f1f5f9; color: #64748b;
+      border-radius: 10px; padding: 0 6px; font-size: 10px;
+      font-weight: 600; line-height: 18px; min-width: 20px;
+      text-align: center;
+    }
+    .node-list-filters .chip.active .badge {
+      background: #dbeafe; color: #2563eb;
+    }
+    .node-list-filters .chip .flag-mini { display: none; }
+    .node-list-filters .chip .ico-emoji { display: none; }
+    .node-list-filters .chip .ico-check,
+    .node-list-filters .chip .ico-x,
+    .node-list-filters .chip .ico-globe { display: none; }
+
     .filter-scroll {
-      display: flex; gap: 6px; overflow-x: auto; max-width: 100%;
-      scrollbar-width: thin;
+      display: flex; align-items: center; gap: 6px;
+      overflow-x: auto; min-width: 0; flex: 1;
+      scrollbar-width: none;
     }
-    .filter-scroll::-webkit-scrollbar { height: 4px; }
-    .filter-scroll::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+    .filter-scroll::-webkit-scrollbar { height: 5px; }
+    .filter-scroll::-webkit-scrollbar-track { background: transparent; }
+    .filter-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
+    .filter-line[data-line="status"] .chip { margin-right: 2px; }
 
-    .legend {
-      padding: 10px 20px; display: flex; align-items: center; gap: 18px;
-      font-size: 11px; color: var(--muted);
-      border-bottom: 1px solid var(--border);
+    @media (max-width: 1180px) {
+      .node-list-header {
+        grid-template-columns: minmax(0, 1fr) 220px minmax(0, 1.5fr);
+        column-gap: 16px;
+      }
+      .search-box { width: 220px; }
+      .node-list-filters .chip { padding-left: 8px; padding-right: 4px; }
     }
-    .legend .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; }
+    @media (max-width: 900px) {
+      .node-list-header {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+        row-gap: 12px;
+      }
+      .node-list-title { grid-column: 1; grid-row: 1; align-self: start; }
+      .node-list-stats { grid-column: 1; grid-row: 2; padding-left: 52px; }
+      .node-list-search { grid-column: 1; grid-row: 3; }
+      .search-box { width: min(100%, 280px); }
+      .node-list-filters { grid-column: 1; grid-row: 4; gap: 8px; }
+      .filter-line { white-space: normal; height: auto; min-height: 28px; }
+      .filter-line[data-line="country"] .filter-scroll { overflow-x: auto; }
+    }
+
+    .probe-table-wrap {
+      overflow-x: auto;
+      background: #fff;
+    }
+    .probe-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .probe-table th {
+      background: #f8fafc;
+      padding: 11px 16px; text-align: left;
+      font-size: 12px; font-weight: 600; color: #64748b;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .probe-table th.availability-head { padding-right: 14px; }
+    .availability-head-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 20px; min-width: 390px;
+    }
+    .legend {
+      display: inline-flex; align-items: center; gap: 14px;
+      font-size: 11px; font-weight: 400; color: #94a3b8;
+      white-space: nowrap;
+    }
+    .legend .dot {
+      display: inline-block; width: 8px; height: 8px;
+      border-radius: 50%; margin-right: 4px; vertical-align: 0;
+    }
     .legend .dot.ok { background: #22c55e; }
     .legend .dot.warn { background: #f59e0b; }
     .legend .dot.bad { background: #ef4444; }
-
-    .probe-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-    .probe-table th {
-      background: var(--panel-2);
-      padding: 10px 16px; text-align: left;
-      font-size: 12px; font-weight: 500; color: var(--muted);
-      border-bottom: 1px solid var(--border);
-    }
     .probe-table td {
       padding: 14px 16px; border-bottom: 1px solid #f3f4f6;
       vertical-align: middle; font-size: 13px; color: var(--text);
@@ -437,51 +490,62 @@
   <section class="node-list-card">
     <div class="node-list-header">
       <div class="node-list-title">
-        <span class="ico">📋</span>
+        <span class="ico">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </span>
         <h2>所有节点 <span class="count">(<strong id="nodeCount">—</strong>)</span></h2>
       </div>
-      <div class="node-list-controls">
+      <div class="node-list-stats" id="nodeListStats">— 正在被探测 · <span class="ok">—</span> 可用 · <span class="bad">—</span> 不可用</div>
+      <div class="node-list-search">
         <div class="search-box">
           <input type="text" id="searchInput" placeholder="搜索节点名称...">
         </div>
       </div>
-    </div>
-    <div class="node-list-title desc" id="nodeListDesc" style="padding: 0 22px 12px; margin-top: -8px;">— 正在被探测 · <span class="ok">—</span> 可用 · <span class="bad">—</span> 不可用</div>
-
-    <div class="filter-row">
-      <div class="filter-group">
-        <span class="label country">国家/地区</span>
-        <div class="filter-scroll" id="countryChips"></div>
+      <div class="node-list-filters">
+        <div class="filter-line" data-line="country">
+          <span class="lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+            国家/地区：
+          </span>
+          <div class="filter-scroll" id="countryChips"></div>
+        </div>
+        <div class="filter-line" data-line="status">
+          <span class="lbl">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg>
+            状态筛选：
+          </span>
+          <span class="chip active" data-status=""><span class="ico-globe">🌐</span>全部 <span class="badge">59</span></span>
+          <span class="chip" data-status="up"><span class="ico-check">✓</span>可用 <span class="badge">4</span></span>
+          <span class="chip" data-status="down"><span class="ico-x">✗</span>不可用 <span class="badge">55</span></span>
+        </div>
       </div>
-      <div class="filter-group">
-        <span class="label status">状态</span>
-        <span class="chip active" data-status=""><span class="badge">59</span>全部</span>
-        <span class="chip" data-status="up"><span class="ico-check">✓</span>可用 <span class="badge">4</span></span>
-        <span class="chip" data-status="down"><span class="ico-x">✗</span>不可用 <span class="badge">55</span></span>
-      </div>
     </div>
 
-    <div class="legend">
-      <span><span class="dot ok"></span>成功 &lt;150ms</span>
-      <span><span class="dot warn"></span>较慢 150-400ms</span>
-      <span><span class="dot bad"></span>超时 &gt;400ms</span>
+    <div class="probe-table-wrap">
+      <table class="probe-table">
+        <thead>
+          <tr>
+            <th>节点名称</th>
+            <th>协议</th>
+            <th>24 小时状态记录</th>
+            <th>当前延迟</th>
+            <th colspan="2" class="availability-head">
+              <div class="availability-head-inner">
+                <span>24 小时可用率</span>
+                <span class="legend">
+                  <span><span class="dot ok"></span>成功 &lt;150ms</span>
+                  <span><span class="dot warn"></span>较慢 150-400ms</span>
+                  <span><span class="dot bad"></span>超时 &gt;400ms</span>
+                </span>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody id="probeTbody">
+          <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">加载中...</td></tr>
+        </tbody>
+      </table>
     </div>
-
-    <table class="probe-table">
-      <thead>
-        <tr>
-          <th>节点名称</th>
-          <th>协议</th>
-          <th>24 小时状态记录</th>
-          <th>当前延迟</th>
-          <th>24 小时可用率</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody id="probeTbody">
-        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">加载中...</td></tr>
-      </tbody>
-    </table>
   </section>
 
   <div class="footer-info">
@@ -697,12 +761,19 @@
       items.forEach(x => { if (x.country) counts[x.country] = (counts[x.country] || 0) + 1; });
       const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
       const el = document.getElementById('countryChips');
-      const totalAll = Object.values(counts).reduce((a, b) => a + b, 0);
-      el.innerHTML = `<span class="chip ${activeCountries.size === 0 ? 'active' : ''}" data-country=""><span class="ico-emoji">🌐</span>全部 <span class="badge">${totalAll}</span></span>` +
+      const totalAll = items.length;
+      el.innerHTML =
+        `<span class="chip ${activeCountries.size === 0 ? 'active' : ''}" data-country="">
+           <span class="ico-globe">🌐</span>全部 <span class="badge">${totalAll}</span>
+         </span>` +
         sorted.map(c => {
+          const code = c.toLowerCase();
           const info = COUNTRY_DISPLAY[c] || { flag: '🌍', name: c };
           const on = activeCountries.has(c);
-          return `<span class="chip ${on ? 'active' : ''}" data-country="${c}"><span class="ico-emoji">${info.flag}</span>${escapeHtml(info.name)} <span class="badge">${counts[c]}</span></span>`;
+          return `<span class="chip ${on ? 'active' : ''}" data-country="${c}">
+            <img class="flag-mini" src="/static/flags/${code}.svg" alt="${escapeHtml(info.name)}" loading="lazy" onerror="this.replaceWith(makeGlobe())">
+            ${escapeHtml(info.name)} <span class="badge">${counts[c]}</span>
+          </span>`;
         }).join('');
       el.querySelectorAll('.chip').forEach(chip => {
         chip.onclick = () => {
@@ -713,6 +784,14 @@
           applyFilterToggle();
         };
       });
+    }
+
+    // 当 SVG 国旗加载失败时 fallback 为地球 emoji
+    function makeGlobe() {
+      const span = document.createElement('span');
+      span.className = 'ico-emoji';
+      span.textContent = '🌍';
+      return span;
     }
 
     // 轻量过滤：直接 toggle 行 display，不重绘 DOM
@@ -803,7 +882,7 @@
 
       document.getElementById('nodeCount').textContent = total;
       const probing = items.filter(x => x.recent_delays && x.recent_delays.length).length;
-      document.getElementById('nodeListDesc').innerHTML =
+      document.getElementById('nodeListStats').innerHTML =
         `${probing} 个节点正在被探测 · <span class="ok">${up} 个可用</span> · <span class="bad">${down} 个不可用</span>`;
       // 同步状态筛选 chip 的徽章数字
       const statusChips = document.querySelectorAll('[data-status] .badge');
@@ -831,6 +910,59 @@
         document.getElementById('lastUpdate').textContent = '更新失败：' + e.message;
       }
     }
+
+    // PC 端国家筛选：支持 Shift/普通滚轮横向滚动，以及鼠标拖拽浏览后续国家
+    const countryScroller = document.getElementById('countryChips');
+    countryScroller.addEventListener('wheel', (e) => {
+      if (countryScroller.scrollWidth <= countryScroller.clientWidth) return;
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!delta) return;
+      e.preventDefault();
+      countryScroller.scrollLeft += delta;
+    }, { passive: false });
+
+    let countryDragStartX = 0;
+    let countryDragScrollLeft = 0;
+    let countryPointerDown = false;
+    let countryDragging = false;
+    let countrySuppressClick = false;
+    const COUNTRY_DRAG_THRESHOLD = 6;
+
+    countryScroller.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch' || countryScroller.scrollWidth <= countryScroller.clientWidth) return;
+      countryPointerDown = true;
+      countryDragging = false;
+      countryDragStartX = e.clientX;
+      countryDragScrollLeft = countryScroller.scrollLeft;
+    });
+    countryScroller.addEventListener('pointermove', (e) => {
+      if (!countryPointerDown) return;
+      const deltaX = e.clientX - countryDragStartX;
+      if (!countryDragging && Math.abs(deltaX) < COUNTRY_DRAG_THRESHOLD) return;
+      if (!countryDragging) {
+        countryDragging = true;
+        countryScroller.setPointerCapture(e.pointerId);
+        countryScroller.classList.add('is-dragging');
+      }
+      e.preventDefault();
+      countryScroller.scrollLeft = countryDragScrollLeft - deltaX;
+    });
+    const stopCountryDrag = () => {
+      if (countryDragging) countrySuppressClick = true;
+      countryPointerDown = false;
+      countryDragging = false;
+      countryScroller.classList.remove('is-dragging');
+    };
+    countryScroller.addEventListener('pointerup', stopCountryDrag);
+    countryScroller.addEventListener('pointercancel', stopCountryDrag);
+    countryScroller.addEventListener('lostpointercapture', stopCountryDrag);
+    window.addEventListener('pointerup', stopCountryDrag);
+    countryScroller.addEventListener('click', (e) => {
+      if (!countrySuppressClick) return;
+      e.preventDefault();
+      e.stopPropagation();
+      countrySuppressClick = false;
+    }, true);
 
     // 搜索
     document.getElementById('searchInput').addEventListener('input', (e) => {
