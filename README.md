@@ -4,6 +4,8 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-2496ed.svg)](docker-compose.yml)
+[![Release](https://img.shields.io/github/v/release/lei33440/mihomo-probe-dashboard)](https://github.com/lei33440/mihomo-probe-dashboard/releases)
+[![Changelog](https://img.shields.io/badge/changelog-v0.1.0-blue)](CHANGELOG.md)
 
 基于 [daitcl/mihomo](https://github.com/daitcl/mihomo) 暴露的 Clash External Controller API，做的**节点稳定性持续探测 + 历史聚合 + 浅色主题 Web Dashboard**。
 
@@ -23,6 +25,8 @@
 - 🔐 **鉴权**：JWT + bcrypt + 登录限速（5/min/IP）+ 主动撤销（黑名单）
 - 🛡️ **SSRF 防护**：订阅同步拒绝私网/loopback/云 metadata 地址
 - 🌗 **浅色主题 UI**：玻璃态顶部、彩色按钮组、响应式布局
+
+📋 **更新日志**：见 [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
