@@ -164,10 +164,26 @@
       padding: 4px 12px; border-radius: 14px;
       background: var(--panel); border: 1px solid var(--border);
       font-size: 12px; color: var(--text-2); cursor: pointer;
-      transition: all .12s; user-select: none;
+      transition: all .15s ease; user-select: none;
+      display: inline-flex; align-items: center; gap: 4px;
     }
-    .filter-row .chip.active { background: var(--blue); color: #fff; border-color: var(--blue); }
-    .filter-row .chip:hover:not(.active) { border-color: var(--blue); }
+    .filter-row .chip:hover:not(.active) {
+      border-color: var(--blue); color: var(--blue);
+      transform: translateY(-1px); box-shadow: 0 2px 6px rgba(59, 130, 246, .12);
+    }
+    .filter-row .chip:active { transform: scale(0.96); }
+    .filter-row .chip.active {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: #fff; border-color: var(--blue);
+      box-shadow: 0 2px 8px rgba(59, 130, 246, .35);
+    }
+    .filter-row .chip .badge {
+      background: rgba(255, 255, 255, .3); border-radius: 8px;
+      padding: 0 6px; font-size: 11px; font-weight: 600;
+    }
+    .filter-row .chip:not(.active) .badge {
+      background: var(--panel-3); color: var(--muted);
+    }
 
     .legend {
       padding: 10px 20px; display: flex; align-items: center; gap: 18px;
@@ -609,11 +625,12 @@
       items.forEach(x => { if (x.country) counts[x.country] = (counts[x.country] || 0) + 1; });
       const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
       const el = document.getElementById('countryChips');
-      el.innerHTML = `<span class="chip ${activeCountries.size === 0 ? 'active' : ''}" data-country="">🌐 全部 ${counts ? Object.values(counts).reduce((a,b)=>a+b,0) : ''}</span>` +
+      const totalAll = Object.values(counts).reduce((a, b) => a + b, 0);
+      el.innerHTML = `<span class="chip ${activeCountries.size === 0 ? 'active' : ''}" data-country="">🌐 全部 <span class="badge">${totalAll}</span></span>` +
         sorted.map(c => {
           const info = COUNTRY_DISPLAY[c] || { flag: '🌍', name: c };
           const on = activeCountries.has(c);
-          return `<span class="chip ${on ? 'active' : ''}" data-country="${c}">${info.flag} ${escapeHtml(info.name)} ${counts[c]}</span>`;
+          return `<span class="chip ${on ? 'active' : ''}" data-country="${c}">${info.flag} ${escapeHtml(info.name)} <span class="badge">${counts[c]}</span></span>`;
         }).join('');
       el.querySelectorAll('.chip').forEach(chip => {
         chip.onclick = () => {
@@ -621,9 +638,40 @@
           if (c === '') activeCountries.clear();
           else if (activeCountries.has(c)) activeCountries.delete(c);
           else activeCountries.add(c);
-          render();
+          applyFilterToggle();
         };
       });
+    }
+
+    // 轻量过滤：直接 toggle 行 display，不重绘 DOM
+    function applyFilterToggle() {
+      // 同步 chip active 状态（地区 + 状态）
+      document.querySelectorAll('#countryChips .chip').forEach(chip => {
+        const c = chip.dataset.country;
+        const on = c === '' ? activeCountries.size === 0 : activeCountries.has(c);
+        chip.classList.toggle('active', on);
+      });
+      document.querySelectorAll('[data-status]').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.status === activeStatus);
+      });
+      // 切换 tr 显示（不重绘 DOM，毫秒级响应）
+      const rows = document.querySelectorAll('#probeTbody tr[data-name]');
+      let visible = 0;
+      const searchLower = searchText.trim().toLowerCase();
+      rows.forEach(tr => {
+        const item = lastItems.find(x => x.name === tr.dataset.name);
+        if (!item) return;
+        const countryOk = activeCountries.size === 0 || activeCountries.has(item.country);
+        const statusOk = !activeStatus
+          || (activeStatus === 'up' && item.status === 'up')
+          || (activeStatus === 'down' && item.status !== 'up');
+        const searchOk = !searchLower || item.name.toLowerCase().includes(searchLower);
+        const show = countryOk && statusOk && searchOk;
+        tr.style.display = show ? '' : 'none';
+        if (show) visible++;
+      });
+      const total = lastItems.length;
+      document.getElementById('nodeCount').textContent = `(${visible}/${total})`;
     }
 
     function render() {
@@ -674,15 +722,13 @@
     // 搜索
     document.getElementById('searchInput').addEventListener('input', (e) => {
       searchText = e.target.value;
-      render();
+      applyFilterToggle();
     });
     // 状态筛选
     document.querySelectorAll('[data-status]').forEach(chip => {
       chip.onclick = () => {
-        document.querySelectorAll('[data-status]').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
         activeStatus = chip.dataset.status;
-        render();
+        applyFilterToggle();
       };
     });
 
