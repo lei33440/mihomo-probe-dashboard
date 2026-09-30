@@ -194,37 +194,24 @@
     .probe-table tr:hover td { background: #fafbfc; }
 
     .probe-table .name-cell { min-width: 280px; }
-    /* 节点类型彩色方块改为国家国旗大图标 */
+    /* 节点类型彩色方块改为国家国旗大图标（真实 SVG） */
     .probe-table .name-cell .ico-bg {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 40px; height: 30px; border-radius: 6px;
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 22px; line-height: 1; margin-right: 10px;
-      vertical-align: middle; flex: 0 0 36px;
-      background: #f3f4f6; border: 1px solid var(--border);
-      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+      margin-right: 10px; vertical-align: middle; flex: 0 0 40px;
+      background: #fff; border: 1px solid #e5e7eb;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .06);
       position: relative; overflow: hidden;
     }
-    .probe-table .name-cell .ico-bg::after {
-      content: ''; position: absolute; inset: 0;
-      background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,.04));
-      pointer-events: none;
+    .probe-table .name-cell .ico-bg .flag {
+      width: 100%; height: 100%;
+      object-fit: cover; display: block;
     }
-    .probe-table .name-cell .ico-bg.proto-vless,
-    .probe-table .name-cell .ico-bg.proto-anytls,
-    .probe-table .name-cell .ico-bg.proto-trojan,
-    .probe-table .name-cell .ico-bg.proto-vmess,
-    .probe-table .name-cell .ico-bg.proto-ss,
-    .probe-table .name-cell .ico-bg.proto-hysteria2,
-    .probe-table .name-cell .ico-bg.proto-direct,
-    .probe-table .name-cell .ico-bg.proto-other {
-      background: #f9fafb; color: #1f2937;
-    }
-    /* 协议类型小角标（在国旗右下角） */
     .probe-table .name-cell .ico-bg .proto-badge {
-      position: absolute; right: -2px; bottom: -2px;
-      width: 14px; height: 14px; border-radius: 50%;
+      position: absolute; right: -3px; bottom: -3px;
+      width: 16px; height: 16px; border-radius: 50%;
       background: var(--blue); color: #fff;
-      font-size: 8px; font-weight: 700; line-height: 14px;
+      font-size: 9px; font-weight: 700; line-height: 16px;
       text-align: center; border: 1.5px solid #fff;
     }
     .probe-table .name-cell .ico-bg .proto-badge.trojan { background: #f97316; }
@@ -467,11 +454,18 @@
       CN: { flag: '🇨🇳', name: '中国', city: '上海' },
     };
 
-    // 协议图标缩写
+    // 协议图标缩写（仅 fallback 用）
     const PROTO_ICON = {
       vless: 'VL', vmess: 'VM', trojan: 'TR', ss: 'SS',
       hysteria2: 'H2', hy2: 'H2', anytls: 'AT', tuic: 'TC',
       snell: 'SN', direct: 'DI', shadowsocks: 'SS',
+    };
+
+    // 协议类型首字母（用于角标）
+    const PROTO_INITIAL = {
+      vless: 'V', vmess: 'V', trojan: 'T', ss: 'S',
+      hysteria2: 'H', hy2: 'H', anytls: 'A', tuic: 'T',
+      snell: 'S', direct: 'D', shadowsocks: 'S', other: '?',
     };
 
     function escapeHtml(s) {
@@ -531,13 +525,19 @@
     }
 
     function renderRow(p) {
-      const code = p.country || '';
+      const code = (p.country || '').toLowerCase();
       const info = COUNTRY_DISPLAY[code] || { flag: '🌍', name: code || '未知', city: '—' };
       const proto = (p.type || 'other').toLowerCase();
       const protoUp = proto.toUpperCase();
-      // 无 country 时的 fallback 文本
-      const flagOrText = code ? info.flag : (PROTO_ICON[proto] || protoUp.slice(0, 2));
-      const protoBadge = code ? `<span class="proto-badge ${proto}">${escapeHtml(protoUp.slice(0, 1))}</span>` : '';
+      // 国旗：country 有值时用 SVG，无值时 fallback 到 emoji
+      let flagHtml;
+      if (code) {
+        const initial = PROTO_INITIAL[proto] || '?';
+        flagHtml = `<img class="flag" src="/static/flags/${code}.svg" alt="${escapeHtml(info.name)}" loading="lazy" onerror="this.replaceWith(makeText('🌍'))">${''}</img><span class="proto-badge ${proto}">${escapeHtml(initial)}</span>`;
+      } else {
+        // fallback：纯文字协议缩写
+        flagHtml = `${escapeHtml(PROTO_ICON[proto] || protoUp.slice(0, 2))}`;
+      }
       const c = delayColor(p.delay);
       const delayText = p.delay != null ? `${p.delay}<span style="font-size:11px;font-weight:400;color:var(--muted)"> ms</span>` : '连接超时';
       let avail = 0;
@@ -550,11 +550,10 @@
       const availPct = Math.round(avail * 100);
       const availCls = avail >= 0.9 ? 'good' : avail >= 0.5 ? 'warn' : 'bad';
       const protoClass = `proto-${proto}`;
-      const sourceText = p.source === 'custom' ? '自定义' : 'master';
       return `
         <tr data-name="${escapeHtml(p.name)}">
           <td class="name-cell">
-            <span class="ico-bg ${protoClass}" title="${escapeHtml(info.name)}">${flagOrText}${protoBadge}</span>
+            <span class="ico-bg ${protoClass}" title="${escapeHtml(info.name)}">${flagHtml}</span>
             <div class="name-text">
               <div class="main">${escapeHtml(p.name)}</div>
               <div class="sub">${info.flag} ${escapeHtml(info.name)} · ${escapeHtml(info.city)}</div>
