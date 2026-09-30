@@ -1,0 +1,64 @@
+version: '3.8'
+
+# 与 daitcl/mihomo 同网络部署示例：
+# - mihomo 服务先按 daitcl/mihomo 的 docker-compose 启动
+# - 把本文件中的 probe-dashboard 加入同一个 network（默认 clash-net）
+#
+# 启动：
+#   cd probe-dashboard
+#   docker compose up -d
+#
+# 之后访问 http://<server-ip>:8081  （公开页）
+#                 http://<server-ip>:8081/admin  （管理员页）
+
+services:
+  probe-dashboard:
+    build:
+      context: ./backend
+    container_name: probe-dashboard
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MIHOMO_API_URL: http://mihomo:9090
+      MIHOMO_SECRET: ${MIHOMO_SECRET:-changeme}
+      PROBE_INTERVAL: ${PROBE_INTERVAL:-60}
+      PROBE_TIMEOUT: ${PROBE_TIMEOUT:-5000}
+      PROBE_URL: ${PROBE_URL:-https://www.gstatic.com/generate_204}
+      PROBE_CONCURRENCY: ${PROBE_CONCURRENCY:-20}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-please-change-me-to-a-random-32-byte-string}
+    volumes:
+      - ./data:/app/data
+    ports:
+      - "${HOST_PORT:-8081}:8080"
+    networks:
+      - clash-net
+    depends_on:
+      - mihomo
+
+  # 如果你还没有 mihomo 服务，可以把下面这一段也启用，
+  # 跟 probe-dashboard 一键起来：
+  mihomo:
+    container_name: mihomo
+    image: daitcl/mihomo:latest
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      LOG_LEVEL: silent
+      CLASH_SECRET: ${MIHOMO_SECRET:-changeme}
+      SUBSCRIBE_URL: ${SUBSCRIBE_URL:-}
+      SUBSCRIBE_NAME: ${SUBSCRIBE_NAME:-default}
+    ports:
+      - "7890:7890"
+      - "9090:9090"
+      - "8080:8080"
+    volumes:
+      - ./clash-config:/root/.config/mihomo
+      - ./metacubexd-config:/config/caddy
+    networks:
+      - clash-net
+
+networks:
+  clash-net:
+    driver: bridge

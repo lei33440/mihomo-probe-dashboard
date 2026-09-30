@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>节点探针 · 公开视图</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ====== 顶部条健康点 ====== */
+    .health-dot {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 0 4px rgba(34,197,94,.15);
+      animation: pulse 2s ease-in-out infinite;
+      margin-right: 8px; vertical-align: middle;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(34,197,94,.15); }
+      50% { box-shadow: 0 0 0 8px rgba(34,197,94,.05); }
+    }
+
+    /* ====== 主容器 ====== */
+    .probe-page {
+      max-width: 1240px; margin: 0 auto; padding: 0 32px 48px;
+    }
+
+    .page-hero {
+      display: flex; align-items: baseline; justify-content: space-between;
+      padding: 28px 0 16px; gap: 16px;
+    }
+    .page-hero h1 {
+      margin: 0; font-size: 26px; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .page-hero h1 .health-dot { margin: 0; }
+    .page-hero .meta { color: var(--muted); font-size: 13px; }
+
+    /* ====== 统计区 ====== */
+    .probe-stats {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px; margin: 8px 0 24px;
+    }
+    .probe-stat {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      position: relative; overflow: hidden;
+    }
+    .probe-stat::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0;
+      width: 4px; background: var(--blue);
+    }
+    .probe-stat.good::before { background: var(--green); }
+    .probe-stat.bad::before  { background: var(--red); }
+    .probe-stat.warn::before { background: var(--yellow); }
+    .probe-stat .label {
+      color: var(--muted); font-size: 12px; margin-bottom: 6px;
+    }
+    .probe-stat .value {
+      font-size: 28px; font-weight: 700; color: var(--text);
+      font-variant-numeric: tabular-nums; line-height: 1.1;
+    }
+    .probe-stat .value.good { color: var(--green-2); }
+    .probe-stat .value.bad  { color: var(--red); }
+    .probe-stat .value.warn { color: var(--yellow-2); }
+    .probe-stat .sub {
+      color: var(--muted-2); font-size: 11px; margin-top: 4px;
+    }
+
+    /* ====== 节点列表 ====== */
+    .probe-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+    .probe-toolbar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+      font-size: 13px; color: var(--muted);
+    }
+    .probe-toolbar strong { color: var(--text); font-weight: 600; }
+    .probe-toolbar .spacer { flex: 1; }
+
+    .probe-list-rows {
+      padding: 6px;
+    }
+
+    .probe-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      margin-bottom: 4px;
+      transition: background .15s, transform .15s;
+      cursor: default;
+    }
+    .probe-row:hover { background: #f9fafb; }
+    .probe-row:last-child { margin-bottom: 0; }
+
+    .probe-row .name-cell {
+      flex: 0 0 320px; min-width: 0;
+      display: flex; flex-direction: column; gap: 2px;
+    }
+    .probe-row .name-cell .main {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .probe-row .name-cell .sub {
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .probe-row .name-cell .sub .avail {
+      color: var(--green-2); font-weight: 600;
+    }
+    .probe-row .name-cell .sub .avail.low {
+      color: var(--red); font-weight: 600;
+    }
+    .probe-row .name-cell .sub .src {
+      color: var(--blue-2);
+    }
+
+    .probe-row .type-chip {
+      flex: 0 0 auto;
+      padding: 2px 10px; border-radius: 10px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: .3px;
+      background: var(--blue-light); color: var(--blue-2);
+    }
+    .probe-row .type-chip.proto-direct    { background: #f3f4f6; color: #374151; }
+    .probe-row .type-chip.proto-anytls    { background: #cffafe; color: #155e75; }
+    .probe-row .type-chip.proto-trojan   { background: #fed7aa; color: #c2410c; }
+    .probe-row .type-chip.proto-vless    { background: #dbeafe; color: #1d4ed8; }
+    .probe-row .type-chip.proto-vmess    { background: #fce7f3; color: #be185d; }
+    .probe-row .type-chip.proto-ss       { background: #ede9fe; color: #6d28d9; }
+    .probe-row .type-chip.proto-hysteria2{ background: #d1fae5; color: #047857; }
+
+    .probe-row .bars {
+      flex: 1; min-width: 200px; max-width: 380px;
+      display: flex; align-items: center; gap: 2px;
+      height: 32px;
+    }
+    .probe-row .bar {
+      width: 5px; min-height: 3px; border-radius: 1px;
+      transition: background .2s;
+    }
+    .probe-row .bar.good    { background: #22c55e; }
+    .probe-row .bar.warn    { background: #f59e0b; }
+    .probe-row .bar.bad     { background: #ef4444; }
+    .probe-row .bar.unknown { background: #d1d5db; }
+    .probe-row .bar.miss    { background: transparent; border: 1px dashed #e5e7eb; }
+
+    .probe-row .delay {
+      flex: 0 0 110px;
+      font-size: 22px; font-weight: 700; text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .probe-row .delay.good { color: var(--green-2); }
+    .probe-row .delay.warn { color: #f59e0b; }
+    .probe-row .delay.bad  { color: var(--red); }
+    .probe-row .delay.muted { color: var(--muted); font-size: 14px; }
+
+    /* ===== 国家筛选（全部展开式） ===== */
+    .country-filter {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #f9fafb 0%, #ffffff 100%);
+    }
+    .country-filter .label {
+      color: var(--muted); font-size: 12px; font-weight: 600;
+      margin-right: 4px;
+    }
+    .country-filter .clear {
+      color: var(--blue); font-size: 12px; cursor: pointer;
+      padding: 4px 8px; border-radius: 6px;
+    }
+    .country-filter .clear:hover { background: var(--blue-light); }
+    .country-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 16px;
+      background: var(--panel); border: 1px solid var(--border);
+      cursor: pointer; font-size: 13px; color: var(--text);
+      transition: all .12s; user-select: none;
+    }
+    .country-chip:hover { border-color: var(--blue); }
+    .country-chip.selected {
+      background: var(--blue); color: #fff; border-color: var(--blue);
+      font-weight: 600;
+    }
+    .country-chip .check {
+      width: 14px; height: 14px; border-radius: 50%;
+      border: 2px solid var(--border-strong);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: transparent;
+      transition: all .12s;
+    }
+    .country-chip.selected .check {
+      border-color: #fff; background: rgba(255,255,255,.25); color: #fff;
+    }
+    .country-chip .count {
+      background: rgba(0,0,0,.06); border-radius: 10px;
+      padding: 0 6px; font-size: 11px; font-weight: 600;
+      line-height: 16px; min-width: 18px; text-align: center;
+    }
+    .country-chip.selected .count {
+      background: rgba(255,255,255,.25); color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <h1><span class="logo">🌐</span>节点探针 · 公开视图</h1>
+    <div class="meta">
+      <span class="live-dot"></span>
+      <span id="lastUpdate">—</span>
+    </div>
+    <nav>
+      <a href="/admin/login">🔐 管理员登录</a>
+    </nav>
+  </header>
+
+  <div class="probe-page">
+    <div class="page-hero">
+      <h1><span class="health-dot"></span>节点状态</h1>
+      <div class="meta">
+        自动每 10 秒刷新 · 共 <strong id="totalCount">0</strong> 个节点
+      </div>
+    </div>
+
+    <section class="probe-stats">
+      <div class="probe-stat"><div class="label">节点总数</div><div class="value" id="statTotal">—</div><div class="sub">含 mihomo + 自定义</div></div>
+      <div class="probe-stat good"><div class="label">可用</div><div class="value good" id="statUp">—</div><div class="sub">最近一次探测成功</div></div>
+      <div class="probe-stat bad"><div class="label">不可用</div><div class="value bad" id="statDown">—</div><div class="sub">连接超时 / 失败</div></div>
+      <div class="probe-stat warn"><div class="label">平均延迟</div><div class="value" id="statAvg">—</div><div class="sub">可用节点均值</div></div>
+      <div class="probe-stat good"><div class="label">平均可用率</div><div class="value good" id="statAvail">—</div><div class="sub">最近 24 小时</div></div>
+    </section>
+
+    <div class="probe-card">
+      <div class="probe-toolbar">
+        <strong>所有节点</strong>
+        <span>·</span>
+        <span id="probeToolbarMeta">—</span>
+        <span class="spacer"></span>
+        <div class="country-filter" id="countryFilter">
+          <span class="label">🏳️ 国家：</span>
+          <span class="clear" id="countryClear">✕ 清空</span>
+          <!-- chip 列表由 JS 渲染 -->
+        </div>
+        <span class="meta" id="probeLegend">柱状图：<span style="color:#22c55e">■</span> &lt;150ms · <span style="color:#f59e0b">■</span> 150-400ms · <span style="color:#ef4444">■</span> &gt;400ms</span>
+      </div>
+      <div class="probe-list-rows" id="probeList">
+        <!-- 动态渲染 -->
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
+    }
+
+    // ISO 3166-1 alpha-2 → Unicode flag emoji（🇭🇰 香港、🇯🇵 日本 等）
+    function flagForCountry(code) {
+      if (!code || code.length !== 2) return null;
+      const A = 0x1F1E6;
+      const a = 'A'.charCodeAt(0);
+      const c0 = code.charCodeAt(0);
+      const c1 = code.charCodeAt(1);
+      if (c0 < 65 || c0 > 90 || c1 < 65 || c1 > 90) return null;
+      return String.fromCodePoint(A + c0 - a, A + c1 - a);
+    }
+    // 检测节点名开头是否已经有 flag（Regional Indicator Symbol 对）
+    function hasLeadingFlag(name) {
+      if (!name) return false;
+      return /^[\u{1F1E6}-\u{1F1FF}]{2}/u.test(name);
+    }
+    // 节点名前补国旗：已有 emoji 不重复，无就用 country
+    function prependFlag(name, country) {
+      if (hasLeadingFlag(name)) return name;
+      const f = flagForCountry(country);
+      return f ? `${f} ${name}` : name;
+    }
+
+    // 根据延迟返回颜色类
+    function delayColor(ms) {
+      if (ms == null) return 'muted';
+      if (ms < 150) return 'good';
+      if (ms < 400) return 'warn';
+      return 'bad';
+    }
+
+    function colorForBar(ms) {
+      if (ms == null) return 'unknown';
+      if (ms < 150) return 'good';
+      if (ms < 400) return 'warn';
+      return 'bad';
+    }
+
+    // 高度按延迟动态：把 0~1500ms 映射到 4~32px
+    function heightForBar(ms) {
+      if (ms == null) return 4;
+      const max = 1500;
+      const pct = Math.min(ms, max) / max;
+      return Math.max(4, Math.round(4 + pct * 28));
+    }
+
+    function renderBars(delays) {
+      // 固定 30 根柱子，没有数据用 miss 表示
+      const slots = 30;
+      const recent = (delays || []).slice(-slots);
+      const padLeft = slots - recent.length;
+      const html = [];
+      for (let i = 0; i < padLeft; i++) {
+        html.push(`<span class="bar miss" style="height:4px"></span>`);
+      }
+      for (const d of recent) {
+        const cls = colorForBar(d);
+        const h = heightForBar(d);
+        html.push(`<span class="bar ${cls}" style="height:${h}px" title="${d}ms"></span>`);
+      }
+      return html.join('');
+    }
+
+    function renderProbeRow(p) {
+      const c = delayColor(p.delay);
+      const probeSource = p.source === 'custom' ? '自定义' : 'master';
+      const a = p.availability_24h;
+      let availHtml = '未探测';
+      if (a != null) {
+        const pct = (a * 100).toFixed(0);
+        const cls = a >= 0.9 ? 'avail' : a >= 0.5 ? '' : 'avail low';
+        availHtml = `<span class="${cls}">可用率 ${pct}%</span>`;
+      }
+      const typeClass = `proto-${(p.type || 'other').toLowerCase()}`;
+      const delayText = p.delay != null ? `${p.delay} ms` : '—';
+      const displayName = prependFlag(p.name, p.country);
+      return `
+        <div class="probe-row">
+          <div class="name-cell">
+            <div class="main">${escapeHtml(displayName)}</div>
+            <div class="sub"><span class="src">${escapeHtml(probeSource)}</span> · ${availHtml}</div>
+          </div>
+          <span class="type-chip ${typeClass}">${escapeHtml((p.type || '—').toLowerCase())}</span>
+          <div class="bars">${renderBars(p.recent_delays || [])}</div>
+          <div class="delay ${c}">${delayText}</div>
+        </div>
+      `;
+    }
+
+    // ===== 国家代码 → 中文名 + 旗帜 =====
+    const COUNTRY_DISPLAY = {
+      HK: '🇭🇰 香港', JP: '🇯🇵 日本', US: '🇺🇸 美国', SG: '🇸🇬 新加坡',
+      TW: '🇹🇼 台湾', KR: '🇰🇷 韩国', GB: '🇬🇧 英国', DE: '🇩🇪 德国',
+      AU: '🇦🇺 澳大利亚', CA: '🇨🇦 加拿大', RU: '🇷🇺 俄罗斯', IN: '🇮🇳 印度',
+      BR: '🇧🇷 巴西', MY: '🇲🇾 马来西亚', TH: '🇹🇭 泰国', VN: '🇻🇳 越南',
+      PH: '🇵🇭 菲律宾', ID: '🇮🇩 印尼', TR: '🇹🇷 土耳其', AE: '🇦🇪 阿联酋',
+      FR: '🇫🇷 法国', IT: '🇮🇹 意大利', ES: '🇪🇸 西班牙', NL: '🇳🇱 荷兰',
+      CN: '🇨🇳 中国',
+    };
+    let selectedCountries = new Set();
+    let lastItems = [];
+
+    function renderCountryChips() {
+      const counts = {};
+      lastItems.forEach(x => { if (x.country) counts[x.country] = (counts[x.country] || 0) + 1; });
+      const sorted = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+      const el = document.getElementById('countryFilter');
+      // 保留 label + clear
+      el.innerHTML = '<span class="label">🏳️ 国家：</span>' +
+        '<span class="clear" id="countryClear">✕ 清空</span>' +
+        sorted.map(c => {
+          const label = COUNTRY_DISPLAY[c] || c;
+          const on = selectedCountries.has(c);
+          return `<span class="country-chip ${on ? 'selected' : ''}" data-code="${escapeHtml(c)}">
+            <span class="check">✓</span>
+            <span>${label}</span>
+            <span class="count">${counts[c]}</span>
+          </span>`;
+        }).join('');
+      el.querySelectorAll('.country-chip').forEach(chip => {
+        chip.onclick = () => {
+          const code = chip.dataset.code;
+          if (selectedCountries.has(code)) selectedCountries.delete(code);
+          else selectedCountries.add(code);
+          renderCountryChips();
+          applyFilter();
+        };
+      });
+      el.querySelector('#countryClear').onclick = () => {
+        selectedCountries.clear();
+        renderCountryChips();
+        applyFilter();
+      };
+    }
+
+    function applyFilter() {
+      const items = selectedCountries.size > 0
+        ? lastItems.filter(x => selectedCountries.has(x.country))
+        : lastItems;
+      renderStats(items);
+      renderList(items);
+      // 更新工具栏副标题
+      const up = items.filter(x => x.status === 'up').length;
+      const down = items.length - up;
+      const probeOk = items.filter(x => x.recent_delays && x.recent_delays.length).length;
+      document.getElementById('probeToolbarMeta').textContent =
+        `${up} 可用 · ${down} 不可用 · ${probeOk} 正在被探针`;
+    }
+
+    function renderStats(items) {
+      const total = items.length;
+      const up = items.filter(x => x.status === 'up').length;
+      const down = total - up;
+      const delays = items.filter(x => x.delay != null).map(x => x.delay);
+      const avg = delays.length ? Math.round(delays.reduce((a,b)=>a+b,0) / delays.length) : 0;
+      const availItems = items.filter(x => x.availability_24h != null);
+      const avgAvail = availItems.length
+        ? (availItems.reduce((s,x) => s + x.availability_24h, 0) / availItems.length * 100).toFixed(0) + '%'
+        : '—';
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statUp').textContent = up;
+      document.getElementById('statDown').textContent = down;
+      document.getElementById('statAvg').textContent = avg ? avg + ' ms' : '—';
+      document.getElementById('statAvail').textContent = avgAvail;
+    }
+
+    function renderList(items) {
+      const sorted = items.slice().sort((a, b) => {
+        if (a.delay == null && b.delay == null) return 0;
+        if (a.delay == null) return 1;
+        if (b.delay == null) return -1;
+        return a.delay - b.delay;
+      });
+      document.getElementById('probeList').innerHTML = sorted.map(renderProbeRow).join('');
+    }
+
+    async function tick() {
+      try {
+        const items = await fetch('/api/public/proxies').then(r => r.json());
+        lastItems = items;
+        renderCountryChips();
+        applyFilter();
+        document.getElementById('totalCount').textContent = items.length;
+        document.getElementById('lastUpdate').textContent =
+          '更新于 ' + new Date().toLocaleTimeString();
+      } catch (e) {
+        console.error(e);
+        document.getElementById('lastUpdate').textContent = '更新失败：' + e.message;
+      }
+    }
+
+    tick();
+    setInterval(tick, 10_000);
+  </script>
+</body>
+</html>

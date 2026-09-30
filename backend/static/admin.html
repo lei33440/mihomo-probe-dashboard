@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>节点探针 · 管理员</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <h1><span class="logo">🌐</span>节点探针 · 管理员</h1>
+    <div class="meta">
+      <span class="live-dot"></span>
+      <span id="lastUpdate">—</span>
+    </div>
+    <nav>
+      <a href="/">🌍 公开视图</a>
+      <a href="#" id="openTagsBtn">🏷️ 标签管理</a>
+      <a href="#" id="openSubsBtn">📡 外部订阅</a>
+      <span class="divider"></span>
+      <a href="#" class="logout" id="logout">退出登录</a>
+    </nav>
+  </header>
+
+  <section class="page-header">
+    <h1>节点管理</h1>
+    <p class="desc">输入代理节点信息，每行一个节点，支持 VMess、VLESS、Trojan、Shadowsocks、Hysteria、Socks、TUIC、AnyTLS、WireGuard、Snell 协议。</p>
+  </section>
+
+  <!-- 顶部统计卡 -->
+  <div class="stats">
+    <div class="stat"><div class="label">节点总数</div><div class="value" id="statTotal">—</div></div>
+    <div class="stat"><div class="label">可用</div><div class="value good" id="statUp">—</div></div>
+    <div class="stat"><div class="label">不可用</div><div class="value bad" id="statDown">—</div></div>
+    <div class="stat"><div class="label">平均延迟</div><div class="value" id="statAvg">—</div></div>
+    <div class="stat"><div class="label">自管节点</div><div class="value" id="statCustom">—</div></div>
+  </div>
+
+  <!-- 折叠：导入节点面板 -->
+  <details class="panel" id="importPanel">
+    <summary>导入节点</summary>
+    <div class="panel-body">
+      <div class="tabs">
+        <button class="tab active" data-import-tab="manual">手动输入</button>
+        <button class="tab" data-import-tab="sub">订阅导入</button>
+      </div>
+
+      <!-- 手动输入 tab -->
+      <div class="tab-pane active" data-pane="manual">
+        <div class="form-row">
+          <label>节点 URI / YAML（每行一个）</label>
+          <textarea id="manualNodesText" rows="6" placeholder="vless://uuid@host:port?security=reality&sni=...&#10;vmess://...&#10;- name: HK-T1&#10;  type: vless&#10;  server: 1.2.3.4&#10;  port: 443&#10;  uuid: ..."></textarea>
+          <div class="help">支持 vless/vmess/trojan/ss/hysteria2 URI 单行；或 yaml <code>proxies:</code> 列表；或粘贴 clash 配置自动抽取。</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <label class="switch-row">
+            <input type="checkbox" id="manualAsEnabled" checked> <span>启用</span>
+          </label>
+          <input type="text" id="manualTagInput" placeholder="可选：给本次导入打标签" style="width:200px;padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+          </label>
+        </div>
+        <div class="help" style="margin-top:8px;color:var(--muted);font-size:12px">为订阅导入的节点设置标签，留空将使用服务器地址作为标签</div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="btn warn" id="manualImportBtn"><span class="ico">📥</span>导入节点</button>
+          <button class="btn primary" id="manualSaveBtn"><span class="ico">✓</span>保存节点</button>
+        </div>
+        <div id="manualImportErr" class="error" style="color:var(--red);font-size:12px;margin-top:8px"></div>
+      </div>
+
+      <!-- 订阅导入 tab -->
+      <div class="tab-pane" data-pane="sub">
+        <div class="form-row">
+          <label>Clash 订阅链接</label>
+          <input type="text" id="subUrl" placeholder="https://your-airport.com/sub?token=...">
+          <div class="help">请输入 Clash 订阅链接，系统将自动获取并解析节点</div>
+        </div>
+        <div class="form-row">
+          <label>User-Agent</label>
+          <select id="subFmt">
+            <option value="auto">自动检测</option>
+            <option value="uri_list">URI 列表（base64）</option>
+            <option value="clash_yaml">Clash YAML</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <label>UA 字符串（可选，特殊机场）</label>
+          <input type="text" id="subUA" placeholder="clash-meta/1.19">
+        </div>
+        <div class="form-row">
+          <label>节点标签</label>
+          <div class="tag-picker" id="subTagPicker"></div>
+        </div>
+        <div class="switch-row">
+          <input type="checkbox" id="subUseAddrAsTag">
+          <label for="subUseAddrAsTag">默认使用服务器地址作为标签</label>
+        </div>
+        <div class="switch-row">
+          <input type="checkbox" id="subSkipVerify">
+          <label for="subSkipVerify">拉取时跳过证书验证</label>
+        </div>
+        <div class="switch-card">
+          <div>
+            <div class="switch-card-title">⏰ 定时更新此订阅</div>
+            <div class="switch-card-help">开启后，服务端会按设定间隔自动拉取订阅并同步节点</div>
+          </div>
+          <input type="checkbox" id="subAutoSync">
+        </div>
+        <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+          <button class="btn" id="customSubPreviewBtn"><span class="ico">🔍</span>预览</button>
+          <button class="btn warn" id="subImportBtn"><span class="ico">📥</span>导入节点</button>
+          <button class="btn primary" id="subSaveBtn"><span class="ico">✓</span>保存节点</button>
+        </div>
+        <div id="subErr" class="error" style="color:var(--red);font-size:12px;margin-top:8px"></div>
+        <div id="customSubPreview" class="sub-preview" style="display:none"></div>
+      </div>
+    </div>
+  </details>
+
+  <!-- 节点列表 header -->
+  <div class="node-list-header">
+    <div style="display:flex;align-items:baseline;gap:12px">
+      <h2>节点列表 (<span id="statTotalInline">—</span>)</h2>
+      <span class="range">显示 <span id="rangeStart">1</span>-<span id="rangeEnd">50</span></span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="probeAllBtn"><span class="ico">⚡</span>节点测速</button>
+      <button class="btn warn" id="syncBtn"><span class="ico">📡</span>节点探测</button>
+      <button class="btn success" id="openCustomBtn"><span class="ico">📋</span>同步节点列表</button>
+      <button class="btn danger" id="clearAllBtn"><span class="ico">🗑</span>清空所有</button>
+    </div>
+  </div>
+
+  <div class="warning-bar">注意!!! 节点的修改与删除均会同步更新所有订阅</div>
+
+  <!-- 协议筛选 + 标签筛选 -->
+  <div class="filter-section">
+    <div>
+      <span class="filter-label">按协议筛选：</span>
+      <div class="filter-tabs" id="protoFilterTabs">
+        <button class="filter-tab active" data-proto="">全部 (<span id="protoCountAll">—</span>)</button>
+        <button class="filter-tab" data-proto="vless">VLESS (<span id="protoCountVless">0</span>)</button>
+        <button class="filter-tab" data-proto="vmess">VMESS (<span id="protoCountVmess">0</span>)</button>
+        <button class="filter-tab" data-proto="trojan">TROJAN (<span id="protoCountTrojan">0</span>)</button>
+        <button class="filter-tab" data-proto="ss">SS (<span id="protoCountSs">0</span>)</button>
+        <button class="filter-tab" data-proto="hysteria2">HYSTERIA2 (<span id="protoCountHy2">0</span>)</button>
+        <button class="filter-tab" data-proto="anytls">ANYTLS (<span id="protoCountAnytls">0</span>)</button>
+      </div>
+    </div>
+    <div>
+      <span class="filter-label">按标签筛选 <span class="meta" style="font-size:11px">(拖拽标签可排序节点)</span>：</span>
+      <div class="filter-tabs" id="tagFilterTabs">
+        <button class="filter-tab active" data-tag="">全部 (<span id="tagCountAll">—</span>)</button>
+        <!-- 动态填充 -->
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:4px">
+      <span class="filter-label">排序：</span>
+      <button class="filter-tab" id="sortModeBtn">↑↓ 排序模式</button>
+      <button class="filter-tab" id="scrollModeBtn">≡ 滚动模式</button>
+    </div>
+  </div>
+
+  <!-- 分页 -->
+  <div class="pagination">
+    <span>每页</span>
+    <select id="pageSize">
+      <option>20</option>
+      <option selected>50</option>
+      <option>100</option>
+    </select>
+    <span>共 <span id="totalCount">—</span> 个 · 第 <span id="pageNum">1</span>/<span id="pageTotal">1</span> 页</span>
+    <div class="pages" id="pageButtons">
+      <button data-page="first">«</button>
+      <button data-page="prev">‹</button>
+      <button data-page="1" class="active">1</button>
+      <button data-page="2">2</button>
+      <button data-page="next">›</button>
+      <button data-page="last">»</button>
+    </div>
+  </div>
+
+  <!-- 图表（折叠） -->
+  <details class="panel">
+    <summary>📈 延迟曲线</summary>
+    <div class="panel-body">
+      <div class="chart-wrap" style="margin:0;padding:0">
+        <div id="chart"></div>
+      </div>
+      <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+        <span class="filter-label">视图：</span>
+        <select id="rangeSel">
+          <option value="1h">最近 1 小时</option>
+          <option value="6h">最近 6 小时</option>
+          <option value="24h" selected>最近 24 小时</option>
+          <option value="7d">最近 7 天</option>
+          <option value="30d">最近 30 天</option>
+        </select>
+        <input type="text" id="filterText" placeholder="搜索节点..." style="padding:6px 10px;border:1px solid var(--border);border-radius:6px">
+        <select id="filterCountry">
+          <option value="">全部地区</option>
+        </select>
+        <select id="sortBy">
+          <option value="delay">按延迟</option>
+          <option value="name">按名称</option>
+          <option value="country">按地区</option>
+          <option value="uptime">按可用率</option>
+        </select>
+      </div>
+    </div>
+  </details>
+
+  <!-- 表格 -->
+  <table class="table-light" id="proxiesTable">
+    <thead>
+      <tr>
+        <th style="width:32px"></th>
+        <th style="width:90px">协议</th>
+        <th>节点名称</th>
+        <th style="width:50px">标签</th>
+        <th>服务器地址</th>
+        <th style="width:200px">配置</th>
+        <th style="width:90px">操作</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- 登录 modal -->
+  <div class="modal-mask" id="loginModal">
+    <div class="modal">
+      <h2>管理员登录</h2>
+      <label>用户名 <input type="text" id="loginUser" autocomplete="username"></label>
+      <label>密码 <input type="password" id="loginPass" autocomplete="current-password"></label>
+      <div class="error" id="loginErr"></div>
+      <div class="actions">
+        <button class="primary" id="loginBtn">登录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 自定义节点管理 modal -->
+  <div class="modal-mask" id="customModal">
+    <div class="modal modal-wide">
+      <h2>管理自定义节点</h2>
+
+      <div class="custom-tabs">
+        <button class="tab-btn active" data-tab="add">➕ 添加节点</button>
+        <button class="tab-btn" data-tab="list">📋 节点列表 (<span id="customCount">0</span>)</button>
+        <button class="tab-btn" data-tab="export">📤 导出</button>
+      </div>
+
+      <!-- Add tab -->
+      <div class="tab-pane active" data-pane="add">
+        <label>协议 URI（vless / vmess / trojan / ss / hysteria2）
+          <textarea id="addUriText" rows="4" placeholder="vless://uuid@host:port?..."></textarea>
+        </label>
+        <label>分组（可选）
+          <input type="text" id="addGroup" placeholder="如: 香港 / 美国">
+        </label>
+        <label>备注（可选）
+          <input type="text" id="addNote" placeholder="如: 主力 / 备用">
+        </label>
+        <div class="error" id="addErr"></div>
+        <div class="actions">
+          <button class="primary" id="addUriBtn">添加 URI</button>
+        </div>
+        <hr>
+        <label>或粘贴 yaml（多个节点用 <code>proxies:</code> 列表）
+          <textarea id="addYamlText" rows="5" placeholder="proxies:&#10;  - name: ...&#10;    type: vless&#10;    ..."></textarea>
+        </label>
+        <div class="actions">
+          <button class="primary" id="addYamlBtn">批量添加</button>
+        </div>
+        <hr>
+        <label>订阅链接导入（支持 URI 列表 base64 或 Clash YAML，自动检测）
+          <input type="text" id="subUrl" placeholder="https://your-airport.com/link?token=...">
+        </label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <label style="flex:0 0 auto;color:var(--muted);font-size:12px">格式</label>
+          <select id="subFmt" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px">
+            <option value="auto">自动检测</option>
+            <option value="uri_list">URI 列表（base64）</option>
+            <option value="clash_yaml">Clash YAML</option>
+          </select>
+          <button id="customSubPreviewBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 10px;cursor:pointer">🔍 预览</button>
+          <button class="primary" id="subImportBtn">📥 一键导入</button>
+        </div>
+        <div id="customSubPreview" class="sub-preview" style="display:none"></div>
+        <div id="subTagPicker" class="tag-bar" style="margin-top:10px"></div>
+        <div class="error" id="subErr"></div>
+      </div>
+
+      <!-- List tab -->
+      <div class="tab-pane" data-pane="list">
+        <div id="customList" class="custom-list"></div>
+      </div>
+
+      <!-- Export tab -->
+      <div class="tab-pane" data-pane="export">
+        <p class="meta">
+          把以下 yaml 放入 mihomo 的 proxy-providers 配置项里，mihomo 就会把这些节点加载进来。
+          推荐配置（加到 <code>config.yaml</code>）：
+        </p>
+        <pre id="mihomoCfgExample" class="code-block"></pre>
+        <label>当前启用节点的 yaml
+          <textarea id="exportYamlText" rows="10" readonly></textarea>
+        </label>
+        <div class="actions">
+          <button id="copyYamlBtn">📋 复制 yaml</button>
+          <button id="downloadYamlBtn">⬇ 下载 yaml</button>
+          <button class="primary" id="refreshYamlBtn">🔄 刷新</button>
+        </div>
+      </div>
+
+      <div class="actions modal-footer">
+        <button class="btn subtle" id="closeCustomBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 标签管理 modal -->
+  <div class="modal-mask" id="tagsModal">
+    <div class="modal modal-wide">
+      <h2>🏷️ 标签管理</h2>
+      <p class="meta">给节点打分类标签（如：主力 / 备用 / 工作专用 / 视频解锁 等），便于按标签筛选和批量操作。</p>
+
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <input type="text" id="newTagName" placeholder="标签名（必填）" maxlength="40" style="flex:1">
+        <input type="color" id="newTagColor" value="#58a6ff" style="width:50px;height:32px;border:1px solid var(--border);background:transparent;border-radius:4px;cursor:pointer">
+        <button class="btn purple" id="createTagBtn"><span class="ico">＋</span>创建</button>
+      </div>
+      <div class="error" id="tagErr"></div>
+
+      <div id="tagList" class="tag-list"></div>
+
+      <div class="actions modal-footer">
+        <button class="btn subtle" id="closeTagsBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 给单个节点打标签 modal -->
+  <div class="modal-mask" id="proxyTagsModal">
+    <div class="modal" style="min-width:480px">
+      <h2>打标签 · <span id="proxyTagsName"></span></h2>
+      <div class="meta">点选要打上的标签（再次点击取消）</div>
+      <div class="tag-picker" id="proxyTagPicker"></div>
+      <div class="actions modal-footer">
+        <button class="btn subtle" id="closeProxyTagsBtn">取消</button>
+        <button class="btn primary" id="saveProxyTagsBtn"><span class="ico">✓</span>保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 外部订阅管理 modal -->
+  <div class="modal-mask" id="subsModal">
+    <div class="modal modal-wide">
+      <h2>📡 外部订阅</h2>
+      <p class="meta">管理从节点管理导入的外部订阅源，用于从第三方订阅同步节点。</p>
+
+      <!-- 列表视图 -->
+      <div class="tab-pane active" data-pane="list" id="subsListView">
+        <div style="display:flex;gap:8px;margin-bottom:12px;justify-content:flex-end">
+          <button class="btn primary" id="subsSyncAllBtn"><span class="ico">🔄</span>同步所有订阅</button>
+          <button class="btn purple" id="subsAddBtn"><span class="ico">＋</span>添加</button>
+        </div>
+        <div id="subsList"></div>
+        <div class="error" id="subsErr"></div>
+      </div>
+
+      <!-- 编辑/添加视图 -->
+      <div class="tab-pane" data-pane="edit" id="subsEditView">
+        <h3 id="subsEditTitle">添加订阅</h3>
+        <label>名称 <input type="text" id="subName" maxlength="60"></label>
+        <label>订阅链接 <input type="text" id="subUrl" placeholder="https://..."></label>
+        <label>User-Agent（可选，适配特殊机场）
+          <input type="text" id="subUA" placeholder="clash-meta/1.19">
+        </label>
+        <label>格式
+          <select id="subFmt" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px">
+            <option value="auto">自动检测</option>
+            <option value="uri_list">URI 列表（base64）</option>
+            <option value="clash_yaml">Clash YAML</option>
+          </select>
+        </label>
+
+        <label>同步计划
+          <select id="subSyncMode" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px">
+            <option value="interval">按间隔（每 N 分钟）</option>
+            <option value="daily">每天定时</option>
+            <option value="weekly">每周定时</option>
+            <option value="off">仅手动</option>
+          </select>
+        </label>
+
+        <div id="subSyncFields" style="display:flex;gap:8px;flex-wrap:wrap">
+          <label style="flex:1;min-width:160px" id="subIntervalField">每 N 分钟同步
+            <input type="number" id="subInterval" min="1" max="10080" value="360">
+          </label>
+          <label style="flex:1;min-width:140px" id="subTimeField" style="display:none">每日 HH:MM
+            <input type="time" id="subTime" value="03:00">
+          </label>
+          <label style="flex:1;min-width:140px" id="subWeekdayField" style="display:none">每周几
+            <select id="subWeekday" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:4px 8px">
+              <option value="0">周一</option><option value="1">周二</option><option value="2">周三</option>
+              <option value="3">周四</option><option value="4">周五</option><option value="5">周六</option>
+              <option value="6">周日</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row switch">
+          <input type="checkbox" id="subEnabled" checked>
+          <label for="subEnabled">启用此订阅</label>
+        </div>
+        <label>默认打标签（可选）
+          <div class="tag-picker" id="subTagPicker"></div>
+        </label>
+        <label>节点名称过滤正则（匹配的节点将被排除，留空则不过滤）
+          <input type="text" id="subNameFilter" placeholder="例如：剩余|流量|到期|订阅|时间|重置">
+        </label>
+
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button id="subPreviewBtn" style="background:var(--panel-2);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:6px 12px;cursor:pointer">🔍 预览</button>
+          <span class="meta">点预览验证 URL / 格式 / 流量信息（不会入库）</span>
+        </div>
+        <div id="subPreview" class="sub-preview" style="display:none"></div>
+
+        <div class="error" id="subEditErr"></div>
+        <div class="actions modal-footer">
+          <button class="btn subtle" id="subEditCancel">取消</button>
+          <button class="btn primary" id="subEditSave"><span class="ico">✓</span>保存</button>
+        </div>
+      </div>
+
+      <div class="actions modal-footer" id="subsListFooter">
+        <button class="btn subtle" id="closeSubsBtn">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    function getToken() {
+      return sessionStorage.getItem("token");
+    }
+
+    // ===== 折叠面板 tab 切换 =====
+    $$('[data-import-tab]').forEach(btn => {
+      btn.onclick = () => {
+        const t = btn.dataset.importTab;
+        $$('[data-import-tab]').forEach(b => b.classList.toggle('active', b.dataset.importTab === t));
+        $$('#importPanel .tab-pane').forEach(p => p.classList.toggle('active', p.dataset.pane === t));
+        if (t === 'sub') renderSubTagPicker();
+      };
+    });
+
+    // ===== 协议筛选 tab =====
+    let activeProtoFilter = '';
+    $$('#protoFilterTabs .filter-tab').forEach(btn => {
+      btn.onclick = () => {
+        activeProtoFilter = btn.dataset.proto;
+        $$('#protoFilterTabs .filter-tab').forEach(b => b.classList.toggle('active', b === btn));
+        applyFilters();
+      };
+    });
+    function updateProtoCounts() {
+      const counts = {};
+      raw.forEach(p => { counts[p.type] = (counts[p.type] || 0) + 1; });
+      const set = (id, n) => { const el = document.getElementById(id); if (el) el.textContent = n; };
+      set('protoCountAll', raw.length);
+      set('protoCountVless', counts['vless'] || 0);
+      set('protoCountVmess', counts['vmess'] || 0);
+      set('protoCountTrojan', counts['trojan'] || 0);
+      set('protoCountSs', counts['ss'] || 0);
+      set('protoCountHy2', (counts['hysteria2'] || 0) + (counts['hy2'] || 0));
+      set('protoCountAnytls', counts['anytls'] || 0);
+    }
+
+    // ===== 手动输入导入 =====
+    $("#manualImportBtn").onclick = async () => {
+      $("#manualImportErr").textContent = "";
+      const text = $("#manualNodesText").value.trim();
+      if (!text) { $("#manualImportErr").textContent = "请粘贴 URI 或 YAML"; return; }
+      try {
+        // 单 URI 时走单条添加；多行/yaml 走 yaml 批量
+        const lines = text.split('\n').filter(l => l.trim());
+        const isYaml = text.includes('proxies:') || text.startsWith('- ') || /^\s*-\s*name:/m.test(text);
+        if (lines.length === 1 && !isYaml) {
+          await api("/api/admin/custom-proxies", {
+            method: "POST", token: getToken(),
+            body: JSON.stringify({ uri: text, group_name: $("#manualTagInput").value.trim() || null }),
+          });
+        } else {
+          await api("/api/admin/custom-proxies/yaml", {
+            method: "POST", token: getToken(),
+            body: JSON.stringify({ yaml_text: text, group_name: $("#manualTagInput").value.trim() || null }),
+          });
+        }
+        $("#manualImportErr").style.color = "var(--green)";
+        $("#manualImportErr").textContent = "✓ 导入成功";
+        $("#manualNodesText").value = "";
+        await refreshCustomCount();
+        await tick();
+      } catch (e) {
+        $("#manualImportErr").style.color = "var(--red)";
+        $("#manualImportErr").textContent = "失败: " + e.message;
+      }
+    };
+    $("#manualSaveBtn").onclick = () => $("#manualImportBtn").click();
+
+    // ===== 同步所有 / 清空所有（占位） =====
+    $("#clearAllBtn").onclick = async () => {
+      if (!confirm("确认清空所有自定义节点？此操作不可恢复。")) return;
+      const list = await api("/api/admin/custom-proxies", { token: getToken() });
+      for (const p of list) {
+        await api(`/api/admin/custom-proxies/${p.id}`, { method: "DELETE", token: getToken() });
+      }
+      await refreshCustomCount();
+      await tick();
+    };
+
+    // ===== 操作提示链接（已移除） =====
+    $("#sortModeBtn").onclick = () => alert("待实现：拖拽排序");
+    $("#scrollModeBtn").onclick = () => alert("待实现：滚动模式");
+
+    // 未登录跳转到独立登录页
+    if (!getToken()) {
+      location.href = "/admin/login";
+    }
+
+    $("#logout").onclick = async (e) => {
+      e.preventDefault();
+      try {
+        const token = getToken();
+        if (token) {
+          await fetch("/api/auth/logout", {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token },
+          });
+        }
+      } catch (e) {}
+      sessionStorage.removeItem("token");
+      location.href = "/admin/login";
+    };
+
+    let raw = [];
+    let chart = null;
+    let currentName = null;
+    let allTags = [];          // [{id, name, color, proxy_count}]
+    let activeTagFilter = new Set();   // 当前筛选的标签 id
+    let editingProxyForTags = null;    // 正在打标签的代理 {id, name, currentTagIds}
+
+    function escapeHtml(s) {
+      return String(s ?? "").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[ch]));
+    }
+
+    function renderStats(items) {
+      const total = items.length;
+      const up = items.filter(x => x.status === "up").length;
+      const delays = items.filter(x => x.delay != null).map(x => x.delay);
+      const avg = delays.length ? Math.round(delays.reduce((a, b) => a + b, 0) / delays.length) : 0;
+      $("#statTotal").textContent = total;
+      $("#statUp").textContent = up;
+      $("#statDown").textContent = total - up;
+      $("#statAvg").textContent = avg ? avg + " ms" : "—";
+    }
+
+    async function refreshCustomCount() {
+      try {
+        const list = await api("/api/admin/custom-proxies", { token: getToken() });
+        $("#statCustom").textContent = list.length;
+        $("#customCount").textContent = list.length;
+      } catch (e) { /* ignore */ }
+    }
+
+    async function refreshTags() {
+      try {
+        allTags = await api("/api/admin/tags", { token: getToken() });
+        renderTagFilter();
+        // 同步更新订阅导入处的标签选择器
+        renderSubTagPicker();
+      } catch (e) { /* ignore */ }
+    }
+
+    function renderTagFilter() {
+      const el = $("#tagFilterList");
+      if (!allTags.length) {
+        el.innerHTML = '<span class="meta">暂无标签</span>';
+        return;
+      }
+      el.innerHTML = allTags.map(t => {
+        const selected = activeTagFilter.has(t.id);
+        return `<span class="tag-pill ${selected ? 'selected' : ''}" style="--tag-color:${escapeHtml(t.color)}" data-id="${t.id}">${escapeHtml(t.name)} (${t.proxy_count})</span>`;
+      }).join("");
+      $$("#tagFilterList .tag-pill").forEach(el => {
+        el.onclick = () => {
+          const id = parseInt(el.dataset.id);
+          if (activeTagFilter.has(id)) activeTagFilter.delete(id);
+          else activeTagFilter.add(id);
+          renderTagFilter();
+          applyFilters();
+        };
+      });
+    }
+
+    // ===== 标签管理 modal =====
+    function openTagsModal() {
+      $("#tagsModal").classList.add("show");
+      renderTagsModalList();
+    }
+    function closeTagsModal() {
+      $("#tagsModal").classList.remove("show");
+    }
+    async function renderTagsModalList() {
+      const list = await api("/api/admin/tags", { token: getToken() });
+      const el = $("#tagList");
+      if (!list.length) {
+        el.innerHTML = '<p class="meta">还没有标签。在上方输入名称 + 颜色创建第一个。</p>';
+        return;
+      }
+      el.innerHTML = list.map(t => `
+        <div class="tag-row" data-id="${t.id}" style="display:flex;align-items:center;gap:8px;padding:6px;border:1px solid var(--border);border-radius:6px;margin-bottom:6px;background:var(--panel-2)">
+          <span class="tag-chip" style="--tag-color:${escapeHtml(t.color)}">${escapeHtml(t.name)}</span>
+          <span class="meta">· 已用于 ${t.proxy_count} 个节点</span>
+          <span style="flex:1"></span>
+          <input type="color" value="${escapeHtml(t.color)}" data-id="${t.id}" class="tagColorEdit" style="width:32px;height:24px;border:1px solid var(--border);background:transparent;border-radius:4px;cursor:pointer">
+          <button class="delTagBtn" data-id="${t.id}" data-name="${escapeHtml(t.name)}">删除</button>
+        </div>
+      `).join("");
+      $$(".delTagBtn", el).forEach(b => {
+        b.onclick = async () => {
+          if (!confirm(`确认删除标签 ${b.dataset.name} ？所有节点关联会自动解除。`)) return;
+          await api(`/api/admin/tags/${b.dataset.id}`, { method: "DELETE", token: getToken() });
+          activeTagFilter = new Set([...activeTagFilter].filter(id => !allTags.find(t => t.id === id) || t.id !== parseInt(b.dataset.id)));
+          await refreshTags();
+          renderTagsModalList();
+          await tick();
+        };
+      });
+      $$(".tagColorEdit", el).forEach(inp => {
+        inp.onchange = async () => {
+          await api(`/api/admin/tags/${inp.dataset.id}`, {
+            method: "PATCH", token: getToken(),
+            body: JSON.stringify({ color: inp.value }),
+          });
+          await refreshTags();
+          renderTagsModalList();
+          await tick();
+        };
+      });
+    }
+    $("#openTagsBtn").onclick = openTagsModal;
+    $("#closeTagsBtn").onclick = closeTagsModal;
+    $("#createTagBtn").onclick = async () => {
+      $("#tagErr").textContent = "";
+      const name = $("#newTagName").value.trim();
+      const color = $("#newTagColor").value;
+      if (!name) { $("#tagErr").textContent = "请填写标签名"; return; }
+      try {
+        await api("/api/admin/tags", {
+          method: "POST", token: getToken(),
+          body: JSON.stringify({ name, color }),
+        });
+        $("#newTagName").value = "";
+        await refreshTags();
+        renderTagsModalList();
+      } catch (e) {
+        $("#tagErr").textContent = "失败: " + e.message;
+      }
+    };
+    const clearTagFilter = $("#clearTagFilter");
+    if (clearTagFilter) clearTagFilter.onclick = () => {
+      activeTagFilter = new Set();
+      if (typeof renderTagFilter === 'function') renderTagFilter();
+      applyFilters();
+    };
+
+    // ===== 节点打标签 modal =====
+    function openProxyTagsModal(proxyId, proxyName) {
+      editingProxyForTags = { id: proxyId, name: proxyName, selected: new Set() };
+      const proxy = raw.find(p => p.id === proxyId);
+      proxy && (proxy.tags || []).forEach(t => editingProxyForTags.selected.add(t.id));
+      $("#proxyTagsName").textContent = proxyName;
+      renderProxyTagPicker();
+      $("#proxyTagsModal").classList.add("show");
+    }
+    function renderProxyTagPicker() {
+      const el = $("#proxyTagPicker");
+      if (!allTags.length) {
+        el.innerHTML = '<p class="meta">还没有标签。先点 "🏷️ 标签管理" 创建。</p>';
+        return;
+      }
+      el.innerHTML = allTags.map(t => {
+        const on = editingProxyForTags.selected.has(t.id);
+        return `<span class="tag-pill ${on ? 'selected' : ''}" style="--tag-color:${escapeHtml(t.color)}" data-id="${t.id}">${escapeHtml(t.name)} (${t.proxy_count})</span>`;
+      }).join("");
+      $$("#proxyTagPicker .tag-pill").forEach(el => {
+        el.onclick = () => {
+          const id = parseInt(el.dataset.id);
+          if (editingProxyForTags.selected.has(id)) editingProxyForTags.selected.delete(id);
+          else editingProxyForTags.selected.add(id);
+          renderProxyTagPicker();
+        };
+      });
+    }
+    $("#closeProxyTagsBtn").onclick = () => $("#proxyTagsModal").classList.remove("show");
+    $("#saveProxyTagsBtn").onclick = async () => {
+      if (!editingProxyForTags) return;
+      const tagIds = [...editingProxyForTags.selected];
+      try {
+        await api(`/api/admin/tags/proxies/${editingProxyForTags.id}/tags`, {
+          method: "PUT", token: getToken(),
+          body: JSON.stringify({ tag_ids: tagIds }),
+        });
+        $("#proxyTagsModal").classList.remove("show");
+        await refreshTags();
+        await tick();
+      } catch (e) {
+        alert("保存失败: " + e.message);
+      }
+    };
+
+    // ===== 订阅导入区标签多选 =====
+    let subSelectedTagIds = new Set();
+    function renderSubTagPicker() {
+      const el = $("#subTagPicker");
+      if (!allTags.length) {
+        el.innerHTML = '<span class="meta">暂无标签。先点 "🏷️ 标签管理" 创建。</span>';
+        return;
+      }
+      el.innerHTML = '<span class="meta">导入后自动打:</span> ' + allTags.map(t => {
+        const on = subSelectedTagIds.has(t.id);
+        return `<span class="tag-pill ${on ? 'selected' : ''}" style="--tag-color:${escapeHtml(t.color)}" data-id="${t.id}">${escapeHtml(t.name)}</span>`;
+      }).join(" ");
+      $$("#subTagPicker .tag-pill").forEach(el => {
+        el.onclick = () => {
+          const id = parseInt(el.dataset.id);
+          if (subSelectedTagIds.has(id)) subSelectedTagIds.delete(id);
+          else subSelectedTagIds.add(id);
+          renderSubTagPicker();
+        };
+      });
+    }
+
+    // ===== 外部订阅管理 =====
+    function openSubsModal() {
+      $("#subsModal").classList.add("show");
+      showSubsView("list");
+      refreshSubsList();
+    }
+    function closeSubsModal() {
+      $("#subsModal").classList.remove("show");
+    }
+    function showSubsView(name) {
+      $$("#subsModal .tab-pane").forEach(p => p.classList.toggle("active", p.dataset.pane === name));
+    }
+    $("#openSubsBtn").onclick = openSubsModal;
+    $("#closeSubsBtn").onclick = closeSubsModal;
+
+    function fmtTrafficBytes(n) {
+      if (n == null) return "—";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let i = 0;
+      while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+      return n.toFixed(i > 1 ? 1 : 0) + " " + units[i];
+    }
+    function fmtExpire(ts) {
+      if (!ts) return "—";
+      const d = new Date(ts);
+      const days = Math.floor((ts - Date.now()) / 86400000);
+      const text = d.toLocaleDateString();
+      if (days < 0) return text + " (已过期)";
+      if (days < 7) return text + ` (${days}d)`;
+      return text;
+    }
+    function trafficPct(t) {
+      if (!t.traffic_total || !t.traffic_upload || !t.traffic_download) return null;
+      const used = (t.traffic_upload || 0) + (t.traffic_download || 0);
+      return Math.min(100, Math.round(used * 100 / t.traffic_total));
+    }
+
+    async function refreshSubsList() {
+      const list = await api("/api/admin/external-subs", { token: getToken() });
+      const el = $("#subsList");
+      if (!list.length) {
+        el.innerHTML = '<p class="meta">还没有外部订阅。点 "➕ 添加" 创建第一个。</p>';
+        return;
+      }
+      el.innerHTML = list.map(s => {
+        const pct = trafficPct(s);
+        const used = (s.traffic_upload || 0) + (s.traffic_download || 0);
+        const cls = pct == null ? '' : pct >= 90 ? 'danger' : pct >= 70 ? 'warn' : 'ok';
+        const trafficCell = pct == null
+          ? `<span class="meta">—</span>`
+          : `<div class="traffic-cell">
+               <div class="traffic-bar"><div class="fill ${cls}" style="width:${pct}%"></div></div>
+               <span class="pct">${pct}%</span>
+             </div>
+             <span class="meta" style="font-size:11px">${fmtTrafficBytes(used)} / ${fmtTrafficBytes(s.traffic_total)}</span>`;
+        const expCls = s.traffic_expire_ts ? (s.traffic_expire_ts < Date.now() ? 'expired' : (s.traffic_expire_ts - Date.now() < 7 * 86400000 ? 'soon' : '')) : '';
+        const lastCls = s.last_sync_status === 'ok' ? 'ok' : s.last_sync_status === 'fail' ? 'fail' : '';
+        const lastText = s.last_sync_ts ? new Date(s.last_sync_ts).toLocaleString() : '从未同步';
+        const intervalHint = (() => {
+          const mode = s.sync_mode || "interval";
+          if (mode === "off") return "手动同步";
+          if (mode === "interval") return s.sync_interval_min > 0 ? `定时 ${Math.round(s.sync_interval_min / 60)}h` : '手动';
+          if (mode === "daily") return `每天 ${s.sync_time || "03:00"}`;
+          if (mode === "weekly") {
+            const wd = ["一", "二", "三", "四", "五", "六", "日"][s.sync_weekday ?? 0];
+            return `每周${wd} ${s.sync_time || "03:00"}`;
+          }
+          return "—";
+        })();
+        const filterHint = s.name_filter_regex
+          ? `<span class="meta">· 过滤: </span><code style="font-size:11px;color:var(--yellow)">${escapeHtml(s.name_filter_regex.length > 30 ? s.name_filter_regex.slice(0, 30) + '…' : s.name_filter_regex)}</code>`
+          : '';
+        return `
+          <div class="sub-row" data-id="${s.id}">
+            <div class="sr-name">${escapeHtml(s.name)}${s.enabled ? '' : ' <span class="meta">(停用)</span>'}</div>
+            <div class="sr-url" title="${escapeHtml(s.url)}">${escapeHtml(s.url)}</div>
+            <div class="sr-nodes">${s.last_sync_node_count ?? '—'}</div>
+            <div style="min-width:200px">${trafficCell}</div>
+            <div class="expire-cell ${expCls}" style="text-align:center">${fmtExpire(s.traffic_expire_ts)}</div>
+            <div class="last-sync-cell ${lastCls}">${lastText}${s.last_sync_error ? `<br><span style="color:var(--red);font-size:11px">${escapeHtml(s.last_sync_error)}</span>` : ''}</div>
+            <div class="sr-actions">
+              <button data-act="sync" data-id="${s.id}" title="立即同步">🔄</button>
+              <button data-act="edit" data-id="${s.id}" title="编辑">✏️</button>
+              <button data-act="del" data-id="${s.id}" data-name="${escapeHtml(s.name)}" title="删除" style="color:var(--red)">🗑</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--muted);margin:-4px 0 8px 12px">${intervalHint}${filterHint}</div>
+        `;
+      }).join("");
+
+      $$(".sub-row [data-act=sync]").forEach(b => b.onclick = async (e) => {
+        e.stopPropagation();
+        b.disabled = true;
+        try {
+          await api(`/api/admin/external-subs/${b.dataset.id}/sync`, { method: "POST", token: getToken() });
+          await refreshSubsList();
+          await refreshCustomCount();
+          await tick();
+        } catch (err) { alert("同步失败: " + err.message); }
+        finally { b.disabled = false; }
+      });
+      $$(".sub-row [data-act=edit]").forEach(b => b.onclick = (e) => {
+        e.stopPropagation();
+        openSubEditView(parseInt(b.dataset.id));
+      });
+      $$(".sub-row [data-act=del]").forEach(b => b.onclick = async (e) => {
+        e.stopPropagation();
+        if (!confirm(`确认删除订阅 ${b.dataset.name} ？已同步的节点不会被删除。`)) return;
+        await api(`/api/admin/external-subs/${b.dataset.id}`, { method: "DELETE", token: getToken() });
+        await refreshSubsList();
+      });
+    }
+    $("#subsSyncAllBtn").onclick = async () => {
+      $("#subsErr").textContent = "同步中…";
+      try {
+        const r = await api("/api/admin/external-subs/sync-all", { method: "POST", token: getToken() });
+        $("#subsErr").style.color = "var(--green)";
+        $("#subsErr").textContent = `✓ 已尝试 ${r.count} 个订阅`;
+        await refreshSubsList();
+        await refreshCustomCount();
+        await tick();
+      } catch (e) {
+        $("#subsErr").style.color = "var(--red)";
+        $("#subsErr").textContent = "同步失败: " + e.message;
+      }
+    };
+
+    // ----- 外部订阅编辑视图 -----
+    let subEditId = null;
+    let subEditTagIds = new Set();
+    function applySyncModeFields(mode) {
+      $("#subIntervalField").style.display = mode === "interval" ? "" : "none";
+      $("#subTimeField").style.display = (mode === "daily" || mode === "weekly") ? "" : "none";
+      $("#subWeekdayField").style.display = mode === "weekly" ? "" : "none";
+    }
+    $("#subSyncMode").onchange = (e) => applySyncModeFields(e.target.value);
+
+    function openSubEditView(subId) {
+      subEditId = subId;
+      subEditTagIds = new Set();
+      showSubsView("edit");
+      $("#subPreview").style.display = "none";
+      if (subId == null) {
+        $("#subsEditTitle").textContent = "添加订阅";
+        $("#subName").value = "";
+        $("#subUrl").value = "";
+        $("#subUA").value = "";
+        $("#subFmt").value = "auto";
+        $("#subSyncMode").value = "interval";
+        applySyncModeFields("interval");
+        $("#subInterval").value = "360";
+        $("#subTime").value = "03:00";
+        $("#subWeekday").value = "0";
+        $("#subEnabled").checked = true;
+      } else {
+        $("#subsEditTitle").textContent = "编辑订阅";
+        api(`/api/admin/external-subs`, { token: getToken() }).then(list => {
+          const s = list.find(x => x.id === subId);
+          if (!s) return;
+          $("#subName").value = s.name;
+          $("#subUrl").value = s.url;
+          $("#subUA").value = s.user_agent || "";
+          $("#subFmt").value = s.fmt;
+          $("#subSyncMode").value = s.sync_mode || "interval";
+          applySyncModeFields(s.sync_mode || "interval");
+          $("#subInterval").value = s.sync_interval_min || 360;
+          $("#subTime").value = s.sync_time || "03:00";
+          $("#subWeekday").value = s.sync_weekday ?? 0;
+          $("#subEnabled").checked = !!s.enabled;
+          $("#subNameFilter").value = s.name_filter_regex || "";
+          subEditTagIds = new Set(s.default_tag_ids || []);
+          renderSubEditTagPicker();
+        });
+      }
+      renderSubEditTagPicker();
+    }
+    function renderSubEditTagPicker() {
+      const el = $("#subTagPicker");
+      if (!allTags.length) {
+        el.innerHTML = '<span class="meta">暂无标签</span>';
+        return;
+      }
+      el.innerHTML = allTags.map(t => {
+        const on = subEditTagIds.has(t.id);
+        return `<span class="tag-pill ${on ? 'selected' : ''}" style="--tag-color:${escapeHtml(t.color)}" data-id="${t.id}">${escapeHtml(t.name)}</span>`;
+      }).join(" ");
+      $$("#subEditView #subTagPicker .tag-pill").forEach(el => {
+        el.onclick = () => {
+          const id = parseInt(el.dataset.id);
+          if (subEditTagIds.has(id)) subEditTagIds.delete(id);
+          else subEditTagIds.add(id);
+          renderSubEditTagPicker();
+        };
+      });
+    }
+    $("#subsAddBtn").onclick = () => openSubEditView(null);
+    $("#subEditCancel").onclick = () => showSubsView("list");
+
+    $("#subPreviewBtn").onclick = async () => {
+      $("#subPreview").style.display = "block";
+      $("#subPreview").textContent = "抓取中…";
+      $("#subEditErr").textContent = "";
+      const url = $("#subUrl").value.trim();
+      if (!url) { $("#subPreview").style.display = "none"; $("#subEditErr").textContent = "请先填订阅链接"; return; }
+      const q = new URLSearchParams({
+        url,
+        fmt: $("#subFmt").value,
+        user_agent: $("#subUA").value.trim() || ""
+      });
+      try {
+        const r = await api(`/api/admin/external-subs/preview?${q}`, { token: getToken() });
+        const types = Object.entries(r.types_summary || {}).map(([t, c]) => `${t}:${c}`).join(' · ');
+        const t = r.traffic || {};
+        const trafficTxt = [];
+        if (t.upload != null)   trafficTxt.push(`↑ ${fmtTrafficBytes(t.upload)}`);
+        if (t.download != null) trafficTxt.push(`↓ ${fmtTrafficBytes(t.download)}`);
+        if (t.total != null)    trafficTxt.push(`总量 ${fmtTrafficBytes(t.total)}`);
+        if (t.expire != null)   trafficTxt.push(`到期 ${new Date(t.expire * 1000).toLocaleDateString()}`);
+        let html = `
+          <div>检测格式: <b>${escapeHtml(r.detected_format)}</b> · 抓取 <b>${r.fetched_chars}</b> 字符 · 解析出 <b style="color:${r.parsed_ok ? 'var(--green)' : 'var(--red)'}">${r.total_parsed}</b> 个节点</div>
+          ${types ? `<div class="meta">类型分布: ${types}</div>` : ''}
+          ${trafficTxt.length ? `<div class="meta">流量信息: ${trafficTxt.join(' · ')}</div>` : '<div class="meta">流量信息: 未返回（机场没设 subscription-userinfo 头）</div>'}
+        `;
+        if (r.parsed_ok && r.total_parsed > 0) {
+          // 后端返回完整 nodes（精简字段）；全部展示
+          html += renderPreviewNodesTable(r.nodes || []);
+        } else if (!r.parsed_ok) {
+          html += `<div class="meta" style="color:var(--yellow)">解析失败: ${escapeHtml(r.parse_error || '')}</div>
+                   <div class="meta">前 300 字符:</div>
+                   <pre class="code-block">${escapeHtml(r.raw_head || '(空)')}</pre>`;
+        }
+        $("#subPreview").innerHTML = html;
+      } catch (e) {
+        $("#subPreview").style.display = "none";
+        $("#subEditErr").textContent = "预览失败: " + e.message;
+      }
+    };
+
+    $("#subEditSave").onclick = async () => {
+      $("#subEditErr").textContent = "";
+      const name = $("#subName").value.trim();
+      const url = $("#subUrl").value.trim();
+      if (!name || !url) { $("#subEditErr").textContent = "名称和 URL 必填"; return; }
+      const body = {
+        name, url,
+        user_agent: $("#subUA").value.trim() || null,
+        fmt: $("#subFmt").value,
+        enabled: $("#subEnabled").checked,
+        sync_mode: $("#subSyncMode").value,
+        sync_interval_min: parseInt($("#subInterval").value) || 0,
+        sync_time: $("#subTime").value || "03:00",
+        sync_weekday: parseInt($("#subWeekday").value) || 0,
+        default_tag_ids: [...subEditTagIds],
+        name_filter_regex: $("#subNameFilter").value.trim() || null,
+      };
+      try {
+        if (subEditId == null) {
+          await api("/api/admin/external-subs", { method: "POST", token: getToken(), body: JSON.stringify(body) });
+        } else {
+          await api(`/api/admin/external-subs/${subEditId}`, { method: "PATCH", token: getToken(), body: JSON.stringify(body) });
+        }
+        showSubsView("list");
+        await refreshSubsList();
+      } catch (e) {
+        $("#subEditErr").textContent = "保存失败: " + e.message;
+      }
+    };
+
+    function renderTable(items) {
+      const tb = $("#proxiesTable tbody");
+      tb.innerHTML = "";
+      items.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.dataset.name = p.name;
+        tr.dataset.id = p.id;
+        const status = STATUS[p.status] || STATUS.unknown;
+        const tagsHtml = (p.tags || []).length
+          ? `<span class="tag-check" title="${escapeHtml((p.tags || []).map(t=>t.name).join(', '))}">✓</span>`
+          : '<span class="meta">—</span>';
+        const proto = (p.type || 'other').toLowerCase();
+        const server = p.server && p.port
+          ? `${escapeHtml(p.server)}:${escapeHtml(String(p.port))}`
+          : (p.last_error ? `<span style="color:var(--red)">${escapeHtml(p.last_error.slice(0,30))}</span>` : '<span class="meta">—</span>');
+        const net = p.network ? `<span class="net-badge">${escapeHtml(p.network)}</span>` : '';
+        const delayStr = p.delay != null ? `${p.delay} ms` : '—';
+        const noteStr = p.note ? `<span class="note-text">${escapeHtml(p.note)}</span>` : '';
+        tr.innerHTML = `
+          <td><span class="drag-handle" title="拖拽排序">⋮⋮</span></td>
+          <td><span class="proto-chip proto-${escapeHtml(proto)}">${escapeHtml((p.type || '?').toUpperCase())}</span></td>
+          <td><span class="status-dot ${status.dotClass === 'up' ? 'up' : status.dotClass === 'down' ? 'down' : 'unknown'}"></span>${escapeHtml(p.name)}${noteStr}</td>
+          <td>${tagsHtml}</td>
+          <td class="server-cell">${server}${net}</td>
+          <td>
+            <button class="icon-btn primary" data-act="probe" data-name="${escapeHtml(p.name)}" title="延迟测试 (mihomo)">⚡</button>
+            <button class="icon-btn" data-act="tcping" data-name="${escapeHtml(p.name)}" title="TCPing 测试">🔍</button>
+            <button class="icon-btn muted" data-act="copy" data-name="${escapeHtml(p.name)}" title="复制节点名">📋</button>
+            <button class="icon-btn success" data-act="tag" data-id="${p.id}" data-name="${escapeHtml(p.name)}" title="打标签">🏷️</button>
+          </td>
+          <td><button class="icon-btn danger" data-act="del" data-name="${escapeHtml(p.name)}" title="删除">🗑</button></td>
+        `;
+        tr.onclick = (e) => {
+          // 点击行只对非按钮区域触发历史查看
+          if (e.target.closest('button')) return;
+          selectProxy(p.name);
+        };
+        tb.appendChild(tr);
+      });
+      // 绑定所有图标按钮
+      $$("#proxiesTable [data-act=probe]").forEach(b => b.onclick = (e) => { e.stopPropagation(); probeOne(b.dataset.name); });
+      $$("#proxiesTable [data-act=tcping]").forEach(b => b.onclick = (e) => { e.stopPropagation(); tcpingOne(b.dataset.name); });
+      $$("#proxiesTable [data-act=copy]").forEach(b => b.onclick = (e) => { e.stopPropagation(); copyName(b.dataset.name); });
+      $$("#proxiesTable [data-act=tag]").forEach(b => b.onclick = (e) => { e.stopPropagation(); openProxyTagsModal(parseInt(b.dataset.id), b.dataset.name); });
+      $$("#proxiesTable [data-act=del]").forEach(b => b.onclick = (e) => { e.stopPropagation(); deleteProxy(b.dataset.name); });
+    }
+
+    // ===== 行操作 handler =====
+    async function tcpingOne(name) {
+      // 对 custom_proxies 走 /test，对 mihomo 节点走 /probe
+      const item = raw.find(x => x.name === name);
+      if (!item) return;
+      try {
+        if (item.source === 'custom') {
+          // custom 节点的 id 就是 custom_proxies.id
+          const r = await api(`/api/admin/custom-proxies/${item.id}/test`, { method: "POST", token: getToken() });
+          if (r.ok) alert(`✓ TCP ${r.connect_ms}ms + TLS ${r.tls_ms}ms = ${r.total_ms}ms`);
+          else      alert(`✗ ${r.error}`);
+        } else {
+          await probeOne(name);
+          await tick();
+          alert(`已触发 mihomo 延迟测试`);
+        }
+      } catch (e) { alert('测试失败: ' + e.message); }
+    }
+    function copyName(name) {
+      navigator.clipboard.writeText(name).then(() => {
+        // 简单反馈：在按钮上闪一下
+        const btn = document.querySelector(`#proxiesTable [data-act=copy][data-name="${CSS.escape(name)}"]`);
+        if (btn) { const old = btn.textContent; btn.textContent = '✓'; setTimeout(() => btn.textContent = old, 800); }
+      }).catch(() => alert('复制失败'));
+    }
+    async function deleteProxy(name) {
+      const item = raw.find(x => x.name === name);
+      if (!item) return;
+      if (!confirm(`确认删除节点 ${name} ？`)) return;
+      try {
+        if (item.source === 'custom') {
+          await api(`/api/admin/custom-proxies/${item.id}`, { method: 'DELETE', token: getToken() });
+          await refreshCustomCount();
+        }
+        // mihomo 来源的节点无法直接删（由 mihomo 自己管理），只刷新
+        await tick();
+      } catch (e) { alert('删除失败: ' + e.message); }
+    }
+
+    function refreshCountries() {
+      const set = new Set();
+      raw.forEach(x => x.country && set.add(x.country));
+      const cur = $("#filterCountry").value;
+      $("#filterCountry").innerHTML = '<option value="">全部地区</option>' +
+        Array.from(set).sort().map(c => `<option value="${c}">${c}</option>`).join("");
+      $("#filterCountry").value = cur;
+    }
+
+    function applyFilters() {
+      const c = $("#filterCountry").value;
+      const t = $("#filterText").value.trim().toLowerCase();
+      const s = $("#sortBy").value;
+      let list = raw.slice();
+      if (c) list = list.filter(x => x.country === c);
+      if (t) list = list.filter(x => x.name.toLowerCase().includes(t) || (x.group || "").toLowerCase().includes(t));
+      // 协议筛选
+      if (activeProtoFilter) {
+        list = list.filter(x => (x.type || '').toLowerCase() === activeProtoFilter.toLowerCase());
+      }
+      // 标签筛选：节点必须包含所有选中标签
+      if (activeTagFilter.size > 0) {
+        list = list.filter(x => {
+          const tagIds = new Set((x.tags || []).map(t => t.id));
+          for (const tid of activeTagFilter) if (!tagIds.has(tid)) return false;
+          return true;
+        });
+      }
+      if (s === "delay") list.sort((a, b) => (a.delay ?? 1e9) - (b.delay ?? 1e9));
+      else if (s === "name") list.sort((a, b) => a.name.localeCompare(b.name));
+      else if (s === "country") list.sort((a, b) => (a.country || "").localeCompare(b.country || ""));
+      else if (s === "uptime") list.sort((a, b) => +a.status === +b.status ? 0 : (a.status === "up" ? -1 : 1));
+      renderTable(list);
+      // 更新分页计数
+      const total = list.length;
+      $("#totalCount").textContent = total;
+      $("#statTotalInline").textContent = raw.length;
+      $("#rangeStart").textContent = total ? 1 : 0;
+      $("#rangeEnd").textContent = Math.min(total, 50);
+    }
+
+    // 共用：把 nodes 数组渲染成浅色表格（预览面板用）
+    function renderPreviewNodesTable(nodes) {
+      if (!nodes || !nodes.length) return '<p class="meta">无可显示节点</p>';
+      return `
+        <table class="table-light" style="margin:8px 0 0 0;width:100%">
+          <thead>
+            <tr>
+              <th style="width:32px"></th>
+              <th style="width:90px">协议</th>
+              <th>节点名称</th>
+              <th>服务器</th>
+              <th style="width:80px">端口</th>
+              <th style="width:120px">传输</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${nodes.map(n => {
+              const proto = (n.type || 'other').toLowerCase();
+              const net = n.network ? `<span class="net-badge">${escapeHtml(n.network)}</span>` : '';
+              const server = n.server ? escapeHtml(n.server) : '<span class="meta">—</span>';
+              const port = n.port ? String(n.port) : '<span class="meta">—</span>';
+              const cipher = n.cipher || n.security || '—';
+              return `
+                <tr>
+                  <td><span class="drag-handle" style="color:#e5e7eb">⋮⋮</span></td>
+                  <td><span class="proto-chip proto-${escapeHtml(proto)}">${escapeHtml((n.type || '?').toUpperCase())}</span></td>
+                  <td>${escapeHtml(n.name || '—')}${net}</td>
+                  <td class="server-cell">${server}</td>
+                  <td class="server-cell">${port}</td>
+                  <td>${escapeHtml(cipher)}</td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function ensureChart() {
+      if (!chart) chart = echarts.init($("#chart"), "dark");
+      window.addEventListener("resize", () => chart.resize());
+    }
+
+    function selectProxy(name) {
+      currentName = name;
+      loadHistory(name);
+    }
+
+    async function loadHistory(name) {
+      ensureChart();
+      const range = $("#rangeSel").value;
+      try {
+        const data = await api(`/api/admin/proxies/${encodeURIComponent(name)}/history?range=${range}`, { token: getToken() });
+        drawChart(name, data);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function drawChart(name, data) {
+      let series = [];
+      if (data.bucket === "raw") {
+        series.push({
+          name: "延迟",
+          type: "scatter",
+          symbolSize: 4,
+          data: data.raw.map(r => [r.ts, r.success ? r.delay_ms : null]),
+          itemStyle: { color: "#58a6ff" },
+        });
+        series.push({
+          name: "失败",
+          type: "scatter",
+          symbolSize: 6,
+          symbol: "triangle",
+          data: data.raw.filter(r => !r.success).map(r => [r.ts, 0]),
+          itemStyle: { color: "#f85149" },
+        });
+      } else if (data.bucket === "5min") {
+        series.push({
+          name: "avg",
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          data: data["5min"].map(r => [r.bucket_ts, r.avg_delay == null ? null : Math.round(r.avg_delay)]),
+          itemStyle: { color: "#58a6ff" },
+          areaStyle: { color: "rgba(88,166,255,.15)" },
+        });
+      } else {
+        series.push({
+          name: "avg",
+          type: "line",
+          smooth: true,
+          showSymbol: false,
+          data: data["1h"].map(r => [r.bucket_ts, r.avg_delay == null ? null : Math.round(r.avg_delay)]),
+          itemStyle: { color: "#58a6ff" },
+        });
+      }
+
+      chart.setOption({
+        title: { text: name, left: "center", textStyle: { color: "#e6edf3" } },
+        tooltip: { trigger: "axis" },
+        xAxis: { type: "time", axisLabel: { color: "#8b949e" } },
+        yAxis: { type: "value", name: "ms", axisLabel: { color: "#8b949e" } },
+        grid: { left: 50, right: 20, top: 50, bottom: 40 },
+        series,
+        backgroundColor: "transparent",
+      });
+    }
+
+    async function probeOne(name) {
+      try {
+        const r = await api(`/api/admin/proxies/${encodeURIComponent(name)}/probe`, { method: "POST", token: getToken() });
+        await tick();
+        if (currentName === name) loadHistory(name);
+        return r;
+      } catch (e) {
+        alert("探测失败: " + e.message);
+      }
+    }
+
+    $("#probeAllBtn").onclick = async () => {
+      $("#probeAllBtn").disabled = true;
+      try {
+        await api("/api/admin/probes/all", { method: "POST", token: getToken() });
+        await tick();
+      } catch (e) { alert(e.message); }
+      finally { $("#probeAllBtn").disabled = false; }
+    };
+    $("#syncBtn").onclick = async () => {
+      try { await api("/api/admin/sync-nodes", { method: "POST", token: getToken() }); await tick(); }
+      catch (e) { alert(e.message); }
+    };
+    ["filterCountry", "sortBy"].forEach(id => $("#" + id).addEventListener("change", applyFilters));
+    $("#filterText").addEventListener("input", applyFilters);
+    $("#rangeSel").addEventListener("change", () => currentName && loadHistory(currentName));
+
+    async function tick() {
+      try {
+        const items = await api("/api/admin/proxies", { token: getToken() });
+        raw = items;
+        renderStats(items);
+        refreshCountries();
+        updateProtoCounts();
+        applyFilters();
+        $("#lastUpdate").textContent = "更新于 " + new Date().toLocaleTimeString();
+      } catch (e) {
+        if (e.message === "unauthorized") showLogin();
+        else console.error(e);
+      }
+    }
+
+    function init() {
+      refreshTags();
+      tick();
+      setInterval(tick, 10_000);
+      refreshCustomCount();
+      setTimeout(() => {
+        const first = $("tbody tr");
+        if (first) first.click();
+      }, 1000);
+      // 标签筛选 chips 用所有 tags
+      renderProtoTagTabs();
+    }
+    function renderProtoTagTabs() {
+      // 在 #tagFilterTabs 里渲染所有 tag chips
+      const el = $("#tagFilterTabs");
+      const allBtn = el.querySelector('[data-tag=""]');
+      el.innerHTML = '';
+      el.appendChild(allBtn);
+      allBtn.textContent = `全部 (${raw.length})`;
+      allBtn.onclick = () => {
+        activeTagFilter = new Set();
+        $$('#tagFilterTabs .filter-tab').forEach(b => b.classList.toggle('active', b.dataset.tag === ''));
+        $$('#tagFilterList .tag-pill').forEach(p => p.classList.remove('selected'));
+        applyFilters();
+      };
+      allTags.forEach(t => {
+        const btn = document.createElement('button');
+        btn.className = 'filter-tab';
+        btn.dataset.tag = t.id;
+        btn.textContent = `${t.name} (${t.proxy_count})`;
+        btn.onclick = () => {
+          if (activeTagFilter.has(t.id)) activeTagFilter.delete(t.id);
+          else activeTagFilter.add(t.id);
+          $$('#tagFilterTabs .filter-tab').forEach(b => {
+            b.classList.toggle('active', b === allBtn ? activeTagFilter.size === 0 : (activeTagFilter.has(parseInt(b.dataset.tag)) || false));
+          });
+          applyFilters();
+        };
+        el.appendChild(btn);
+      });
+    }
+    if (getToken()) init();
+
+    // ===== 自定义节点管理 =====
+    function openCustom() {
+      $("#customModal").classList.add("show");
+      switchCustomTab("add");
+      refreshCustomList();
+    }
+    function closeCustom() {
+      $("#customModal").classList.remove("show");
+    }
+    function switchCustomTab(name) {
+      $$("#customModal .tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+      $$("#customModal .tab-pane").forEach(p => p.classList.toggle("active", p.dataset.pane === name));
+      if (name === "list") refreshCustomList();
+      if (name === "export") refreshExport();
+    }
+    $$("#customModal .tab-btn").forEach(b => b.onclick = () => switchCustomTab(b.dataset.tab));
+    $("#openCustomBtn").onclick = openCustom;
+    $("#closeCustomBtn").onclick = closeCustom;
+
+    $("#addUriBtn").onclick = async () => {
+      $("#addErr").textContent = "";
+      const uri = $("#addUriText").value.trim();
+      if (!uri) { $("#addErr").textContent = "请粘贴 URI"; return; }
+      try {
+        const r = await api("/api/admin/custom-proxies", {
+          method: "POST", token: getToken(),
+          body: JSON.stringify({
+            uri,
+            group_name: $("#addGroup").value.trim() || null,
+            note: $("#addNote").value.trim() || null,
+          }),
+        });
+        $("#addErr").style.color = "var(--green)";
+        $("#addErr").textContent = `✓ 已添加 ${r.name} (id=${r.id})`;
+        $("#addUriText").value = "";
+        refreshCustomCount();
+      } catch (e) {
+        $("#addErr").style.color = "var(--red)";
+        $("#addErr").textContent = "失败: " + e.message;
+      }
+    };
+    $("#addYamlBtn").onclick = async () => {
+      $("#addErr").textContent = "";
+      const text = $("#addYamlText").value.trim();
+      if (!text) { $("#addErr").textContent = "请粘贴 yaml"; return; }
+      try {
+        const list = await api("/api/admin/custom-proxies/yaml", {
+          method: "POST", token: getToken(),
+          body: JSON.stringify({ yaml_text: text, group_name: $("#addGroup").value.trim() || null }),
+        });
+        $("#addErr").style.color = "var(--green)";
+        $("#addErr").textContent = `✓ 已添加 ${list.length} 个节点`;
+        $("#addYamlText").value = "";
+        refreshCustomCount();
+      } catch (e) {
+        $("#addErr").style.color = "var(--red)";
+        $("#addErr").textContent = "失败: " + e.message;
+      }
+    };
+
+    // 订阅导入
+    function subGroup() { return $("#addGroup").value.trim() || null; }
+    function subNote() { return $("#addNote").value.trim() || null; }
+    $("#customSubPreviewBtn").onclick = async () => {
+      $("#subErr").textContent = "";
+      $("#customSubPreview").style.display = "none";
+      const url = $("#subUrl").value.trim();
+      const fmt = $("#subFmt").value;
+      if (!url) { $("#subErr").textContent = "请填写订阅链接"; return; }
+      $("#customSubPreview").style.display = "block";
+      $("#customSubPreview").textContent = "抓取中…";
+      try {
+        const q = new URLSearchParams({ url, fmt });
+        const r = await api(`/api/admin/custom-proxies/subscribe/preview?${q}`, { token: getToken() });
+        const types = Object.entries(r.types_summary || {}).map(([t,c]) => `${t}:${c}`).join(' · ');
+        let html = `
+          <div>检测格式: <b>${escapeHtml(r.detected_format)}</b> · 抓取 <b>${r.fetched_chars}</b> 字符 / <b>${r.line_count}</b> 行 · 解析出 <b style="color:${r.parsed_ok?'var(--green)':'var(--red)'}">${r.total_parsed}</b> 个节点</div>
+          ${types ? `<div class="meta">类型分布: ${types}</div>` : ''}
+        `;
+        if (r.parsed_ok && r.total_parsed > 0) {
+          html += renderPreviewNodesTable(r.nodes || []);
+        } else {
+          html += `<div class="meta" style="color:var(--yellow)">解析失败: ${escapeHtml(r.parse_error || '')}</div>
+                   <div class="meta">首行（前 300 字符）:</div>
+                   <pre class="code-block">${escapeHtml(r.raw_first_line || '(空)')}</pre>
+                   <div class="meta">前 300 字符（用于判断格式）:</div>
+                   <pre class="code-block">${escapeHtml(r.raw_head || '(空)')}</pre>`;
+        }
+        $("#customSubPreview").innerHTML = html;
+      } catch (e) {
+        $("#customSubPreview").style.display = "none";
+        $("#subErr").textContent = "预览失败: " + e.message;
+      }
+    };
+    $("#subImportBtn").onclick = async () => {
+      $("#subErr").textContent = "";
+      const url = $("#subUrl").value.trim();
+      const fmt = $("#subFmt").value;
+      if (!url) { $("#subErr").textContent = "请填写订阅链接"; return; }
+      if (!confirm("确认从该订阅导入所有节点？同名节点会跳过。")) return;
+      try {
+        const r = await api("/api/admin/custom-proxies/subscribe", {
+          method: "POST", token: getToken(),
+          body: JSON.stringify({
+            url, fmt,
+            group_name: subGroup(), note: subNote(),
+            tag_ids: [...subSelectedTagIds],
+          }),
+        });
+        $("#subErr").style.color = "var(--green)";
+        $("#subErr").textContent =
+          `✓ 导入完成：新增 ${r.added_count} / 跳过 ${r.skipped_count} / 共解析 ${r.total_parsed} (format=${r.detected_format})`;
+        refreshCustomCount();
+        await refreshTags();
+        await tick();
+      } catch (e) {
+        $("#subErr").style.color = "var(--red)";
+        $("#subErr").textContent = "导入失败: " + e.message;
+      }
+    };
+
+    async function refreshCustomList() {
+      const list = await api("/api/admin/custom-proxies", { token: getToken() });
+      $("#customCount").textContent = list.length;
+      const el = $("#customList");
+      if (!list.length) {
+        el.innerHTML = '<p class="meta">还没有自定义节点。切到「添加节点」粘贴 URI 或 yaml。</p>';
+        return;
+      }
+      el.innerHTML = list.map(p => `
+        <div class="custom-item" data-id="${p.id}">
+          <div class="ci-main">
+            <div class="ci-name">${escapeHtml(p.name)}</div>
+            <div class="ci-meta">
+              <span class="badge">${p.type}</span>
+              ${p.country ? `<span class="badge">${p.country}</span>` : ""}
+              ${p.group_name ? `<span class="badge">${escapeHtml(p.group_name)}</span>` : ""}
+              ${p.note ? `<span class="badge">${escapeHtml(p.note)}</span>` : ""}
+              ${p.enabled ? "" : '<span class="badge badge-warn">已禁用</span>'}
+            </div>
+            <div class="ci-test" data-result></div>
+          </div>
+          <div class="ci-actions">
+            <button data-act="test">🔌 测试</button>
+            <button data-act="toggle">${p.enabled ? "禁用" : "启用"}</button>
+            <button data-act="delete" class="danger">删除</button>
+          </div>
+        </div>
+      `).join("");
+      $$(".custom-item", el).forEach(item => {
+        const id = parseInt(item.dataset.id);
+        item.querySelector('[data-act=test]').onclick = async (e) => {
+          e.stopPropagation();
+          const out = item.querySelector('[data-result]');
+          out.textContent = "测试中…";
+          try {
+            const r = await api(`/api/admin/custom-proxies/${id}/test`, { method: "POST", token: getToken() });
+            if (r.ok) {
+              out.innerHTML = `<span class="status-up">✓ TCP ${r.connect_ms}ms + TLS ${r.tls_ms}ms = ${r.total_ms}ms</span>`;
+            } else {
+              out.innerHTML = `<span class="status-down">✗ ${escapeHtml(r.error)}</span>`;
+            }
+          } catch (err) {
+            out.innerHTML = `<span class="status-down">✗ ${escapeHtml(err.message)}</span>`;
+          }
+        };
+        item.querySelector('[data-act=toggle]').onclick = async (e) => {
+          e.stopPropagation();
+          const cur = list.find(x => x.id === id);
+          await api(`/api/admin/custom-proxies/${id}`, {
+            method: "PATCH", token: getToken(),
+            body: JSON.stringify({ enabled: !cur.enabled }),
+          });
+          refreshCustomList();
+          refreshCustomCount();
+        };
+        item.querySelector('[data-act=delete]').onclick = async (e) => {
+          e.stopPropagation();
+          if (!confirm(`确认删除节点 ${item.querySelector('.ci-name').textContent} ？`)) return;
+          await api(`/api/admin/custom-proxies/${id}`, { method: "DELETE", token: getToken() });
+          refreshCustomList();
+          refreshCustomCount();
+        };
+      });
+    }
+
+    async function refreshExport() {
+      try {
+        const r = await api("/api/admin/custom-proxies/export/yaml", { token: getToken() });
+        $("#exportYamlText").value = r.yaml;
+        $("#mihomoCfgExample").textContent =
+`proxy-providers:
+  custom-probes:
+    type: http
+    url: http://probe-dashboard:8080/api/internal/custom-proxies-yaml
+    interval: 60
+    path: ./providers/custom-proxies.yaml
+    health-check:
+      enable: true
+      url: "https://www.gstatic.com/generate_204"
+      interval: 300`;
+      } catch (e) {
+        alert(e.message);
+      }
+    }
+    $("#refreshYamlBtn").onclick = refreshExport;
+    $("#copyYamlBtn").onclick = async () => {
+      try {
+        await navigator.clipboard.writeText($("#exportYamlText").value);
+        $("#copyYamlBtn").textContent = "✓ 已复制";
+        setTimeout(() => $("#copyYamlBtn").textContent = "📋 复制 yaml", 1500);
+      } catch (e) { alert(e.message); }
+    };
+    $("#downloadYamlBtn").onclick = () => {
+      const blob = new Blob([$("#exportYamlText").value], { type: "text/yaml" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "custom-proxies.yaml";
+      a.click();
+    };
+  </script>
+</body>
+</html>

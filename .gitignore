@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+
+# 测试
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# 编辑器
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# 环境与数据（敏感）
+.env
+.env.local
+*.log
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# 构建
+build/
+dist/
+*.egg-info/
+*.egg
+
+# 前端
+node_modules/
+.next/
+.nuxt/
+dist/
+.cache/
+
+# OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.bak
+*.tmp
+Thumbs.db
