@@ -194,20 +194,46 @@
     .probe-table tr:hover td { background: #fafbfc; }
 
     .probe-table .name-cell { min-width: 280px; }
+    /* 节点类型彩色方块改为国家国旗大图标 */
     .probe-table .name-cell .ico-bg {
-      width: 32px; height: 32px; border-radius: 8px;
+      width: 36px; height: 36px; border-radius: 10px;
       display: inline-flex; align-items: center; justify-content: center;
-      font-size: 14px; color: #fff; margin-right: 10px;
-      vertical-align: middle; flex: 0 0 32px;
+      font-size: 22px; line-height: 1; margin-right: 10px;
+      vertical-align: middle; flex: 0 0 36px;
+      background: #f3f4f6; border: 1px solid var(--border);
+      box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+      position: relative; overflow: hidden;
     }
-    .probe-table .name-cell .ico-bg.proto-vless    { background: linear-gradient(135deg, #3b82f6, #2563eb); }
-    .probe-table .name-cell .ico-bg.proto-anytls   { background: linear-gradient(135deg, #06b6d4, #0e7490); }
-    .probe-table .name-cell .ico-bg.proto-trojan   { background: linear-gradient(135deg, #f97316, #c2410c); }
-    .probe-table .name-cell .ico-bg.proto-vmess    { background: linear-gradient(135deg, #ec4899, #be185d); }
-    .probe-table .name-cell .ico-bg.proto-ss       { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
-    .probe-table .name-cell .ico-bg.proto-hysteria2{ background: linear-gradient(135deg, #10b981, #047857); }
-    .probe-table .name-cell .ico-bg.proto-direct  { background: linear-gradient(135deg, #6b7280, #374151); }
-    .probe-table .name-cell .ico-bg.proto-other    { background: linear-gradient(135deg, #64748b, #334155); }
+    .probe-table .name-cell .ico-bg::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, transparent 60%, rgba(0,0,0,.04));
+      pointer-events: none;
+    }
+    .probe-table .name-cell .ico-bg.proto-vless,
+    .probe-table .name-cell .ico-bg.proto-anytls,
+    .probe-table .name-cell .ico-bg.proto-trojan,
+    .probe-table .name-cell .ico-bg.proto-vmess,
+    .probe-table .name-cell .ico-bg.proto-ss,
+    .probe-table .name-cell .ico-bg.proto-hysteria2,
+    .probe-table .name-cell .ico-bg.proto-direct,
+    .probe-table .name-cell .ico-bg.proto-other {
+      background: #f9fafb; color: #1f2937;
+    }
+    /* 协议类型小角标（在国旗右下角） */
+    .probe-table .name-cell .ico-bg .proto-badge {
+      position: absolute; right: -2px; bottom: -2px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--blue); color: #fff;
+      font-size: 8px; font-weight: 700; line-height: 14px;
+      text-align: center; border: 1.5px solid #fff;
+    }
+    .probe-table .name-cell .ico-bg .proto-badge.trojan { background: #f97316; }
+    .probe-table .name-cell .ico-bg .proto-badge.anytls { background: #06b6d4; }
+    .probe-table .name-cell .ico-bg .proto-badge.ss { background: #8b5cf6; }
+    .probe-table .name-cell .ico-bg .proto-badge.hysteria2 { background: #10b981; }
+    .probe-table .name-cell .ico-bg .proto-badge.vmess { background: #ec4899; }
+    .probe-table .name-cell .ico-bg .proto-badge.direct { background: #6b7280; }
+    .probe-table .name-cell .ico-bg .proto-badge.other { background: #64748b; }
     .probe-table .name-cell .name-text { display: inline-block; vertical-align: middle; }
     .probe-table .name-cell .name-text .main { font-weight: 600; color: var(--text); }
     .probe-table .name-cell .name-text .sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
@@ -509,7 +535,9 @@
       const info = COUNTRY_DISPLAY[code] || { flag: '🌍', name: code || '未知', city: '—' };
       const proto = (p.type || 'other').toLowerCase();
       const protoUp = proto.toUpperCase();
-      const iconTxt = PROTO_ICON[proto] || protoUp.slice(0, 2);
+      // 无 country 时的 fallback 文本
+      const flagOrText = code ? info.flag : (PROTO_ICON[proto] || protoUp.slice(0, 2));
+      const protoBadge = code ? `<span class="proto-badge ${proto}">${escapeHtml(protoUp.slice(0, 1))}</span>` : '';
       const c = delayColor(p.delay);
       const delayText = p.delay != null ? `${p.delay}<span style="font-size:11px;font-weight:400;color:var(--muted)"> ms</span>` : '连接超时';
       let avail = 0;
@@ -526,7 +554,7 @@
       return `
         <tr data-name="${escapeHtml(p.name)}">
           <td class="name-cell">
-            <span class="ico-bg ${protoClass}">${escapeHtml(iconTxt)}</span>
+            <span class="ico-bg ${protoClass}" title="${escapeHtml(info.name)}">${flagOrText}${protoBadge}</span>
             <div class="name-text">
               <div class="main">${escapeHtml(p.name)}</div>
               <div class="sub">${info.flag} ${escapeHtml(info.name)} · ${escapeHtml(info.city)}</div>
