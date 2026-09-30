@@ -331,7 +331,7 @@
   <p class="page-hero desc">实时探测订阅节点的可用性与延迟，帮助你快速了解各地区连接情况。</p>
 
   <section class="stat-grid" id="statGrid">
-    <div class="stat-card blue">
+    <div class="stat-card blue" id="cardTotal">
       <div class="icon">🗄️</div>
       <div class="body">
         <div class="label">节点总数</div>
@@ -340,7 +340,7 @@
       </div>
       <div class="decoration" id="statDecoTotal"></div>
     </div>
-    <div class="stat-card green">
+    <div class="stat-card green" id="cardUp">
       <div class="icon">✓</div>
       <div class="body">
         <div class="label">可用节点</div>
@@ -349,7 +349,7 @@
       </div>
       <div class="decoration" id="statDecoUp"></div>
     </div>
-    <div class="stat-card red">
+    <div class="stat-card red" id="cardDown">
       <div class="icon">✗</div>
       <div class="body">
         <div class="label">不可用节点</div>
@@ -358,7 +358,7 @@
       </div>
       <div class="decoration" id="statDecoDown"></div>
     </div>
-    <div class="stat-card orange">
+    <div class="stat-card orange" id="cardAvg">
       <div class="icon">⚡</div>
       <div class="body">
         <div class="label">平均延迟</div>
@@ -367,7 +367,7 @@
       </div>
       <div class="decoration" id="statDecoAvg"></div>
     </div>
-    <div class="stat-card cyan">
+    <div class="stat-card cyan" id="cardAvail">
       <div class="icon">📊</div>
       <div class="body">
         <div class="label">24 小时可用率</div>
@@ -522,6 +522,24 @@
         const s = document.createElement('span');
         s.style.height = h + 'px';
         s.style.opacity = (0.5 + Math.random() * 0.5).toFixed(2);
+        el.appendChild(s);
+      }
+    }
+
+    // 装饰柱按比例（0~1）自适应高度
+    function decorateBarsAdaptive(el, n, ratio) {
+      if (!el) return;
+      el.innerHTML = '';
+      const count = 6;
+      ratio = Math.max(0, Math.min(1, ratio || 0.5));
+      for (let i = 0; i < count; i++) {
+        // 数值高 → 柱条整体偏高；数值低 → 柱条普遍矮
+        const baseH = 4 + ratio * 18;
+        const variance = Math.random() * 8 - 4;
+        const h = Math.max(3, Math.round(baseH + variance));
+        const s = document.createElement('span');
+        s.style.height = h + 'px';
+        s.style.opacity = (0.55 + Math.random() * 0.45).toFixed(2);
         el.appendChild(s);
       }
     }
@@ -688,14 +706,47 @@
       const delays = items.filter(x => x.delay != null).map(x => x.delay);
       const avg = delays.length ? Math.round(delays.reduce((a, b) => a + b, 0) / delays.length) : 0;
       const availItems = items.filter(x => x.availability_24h != null);
-      const avgAvail = availItems.length
-        ? (availItems.reduce((s, x) => s + x.availability_24h, 0) / availItems.length * 100).toFixed(0) + '%'
+      const avgAvailRatio = availItems.length
+        ? availItems.reduce((s, x) => s + x.availability_24h, 0) / availItems.length
+        : null;
+      const avgAvail = avgAvailRatio != null
+        ? (avgAvailRatio * 100).toFixed(0) + '%'
         : '—';
+
+      // ===== 自适应染色 =====
+      // 节点总数：固定蓝
+      // 可用节点：固定绿
+      // 不可用节点：> 0 染红
+      // 平均延迟：< 150 绿，< 400 黄，>= 400 红
+      // 24h 可用率：>= 90% 绿，>= 50% 黄，否则红
+      const avgCls = avg > 0 ? (avg < 150 ? 'good' : avg < 400 ? 'warn' : 'bad') : 'muted';
+      const downCls = down > 0 ? 'bad' : 'muted';
+      const availCls = avgAvailRatio == null ? 'muted' : (avgAvailRatio >= 0.9 ? 'good' : avgAvailRatio >= 0.5 ? 'warn' : 'bad');
+      const availIconCls = avgAvailRatio == null ? 'cyan' : (avgAvailRatio >= 0.9 ? 'green' : avgAvailRatio >= 0.5 ? 'orange' : 'red');
+      const avgIconCls = avg > 0 ? (avg < 150 ? 'green' : avg < 400 ? 'orange' : 'red') : 'cyan';
+
+      // 设置大数字颜色
       document.getElementById('statTotal').textContent = total;
       document.getElementById('statUp').textContent = up;
       document.getElementById('statDown').textContent = down;
+      document.getElementById('statDown').className = 'value ' + downCls;
       document.getElementById('statAvg').innerHTML = avg ? `${avg}<span style="font-size:14px;font-weight:400;color:var(--muted)"> ms</span>` : '—';
+      document.getElementById('statAvg').className = 'value ' + avgCls;
       document.getElementById('statAvail').textContent = avgAvail;
+      document.getElementById('statAvail').className = 'value ' + availCls;
+
+      // 切换卡片主题色
+      document.getElementById('cardDown').className = 'stat-card ' + (downCls === 'bad' ? 'red' : 'blue');
+      document.getElementById('cardAvg').className = 'stat-card ' + (avgIconCls);
+      document.getElementById('cardAvail').className = 'stat-card ' + (availIconCls);
+
+      // 装饰柱高度按数值自适应
+      decorateBarsAdaptive(document.getElementById('statDecoUp'), 4, 0.4);
+      decorateBarsAdaptive(document.getElementById('statDecoDown'), 7, 0.7);
+      decorateBarsAdaptive(document.getElementById('statDecoAvg'), 6, 0.5);
+      decorateBarsAdaptive(document.getElementById('statDecoAvail'), 5, avgAvailRatio || 0.25);
+      decorateBarsAdaptive(document.getElementById('statDecoTotal'), 5, 0.6);
+
       document.getElementById('nodeCount').textContent = `(${total})`;
       const probing = items.filter(x => x.recent_delays && x.recent_delays.length).length;
       document.getElementById('nodeListDesc').textContent =
