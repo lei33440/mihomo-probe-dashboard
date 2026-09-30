@@ -28,13 +28,21 @@
 
 ## 📷 截图
 
-公开页（无需登录）— 节点状态 + 延迟柱状图 + 国家筛选 + 可用率：
+### 公开页（无需登录）— 节点状态 + 延迟柱状图 + 国家筛选 + 可用率：
 
 ![public page](docs/screenshot-public.png)
 
-管理后台（需登录）— 节点管理 + 浅色主题 + 标签 + 外部订阅：
+### 管理员登录页（独立 /admin/login）：
+
+![login page](docs/screenshot-login.png)
+
+### 管理后台（需登录）— 节点管理 + 浅色主题：
 
 ![admin page](docs/screenshot-admin.png)
+
+### 外部订阅管理 — 流量统计 + 节点同步 + 定时模式：
+
+![external subs](docs/screenshot-external-subs.png)
 
 ---
 
